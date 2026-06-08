@@ -1,19 +1,22 @@
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
+import { useNavigate } from "react-router-dom";
 
 import "swiper/css";
 
 // Update feature titles, descriptions, and icons here to change the "Why Choose Us" carousel.
-const features = [
-  { id: 1, title: "AI Fraud Detection", desc: "Detect suspicious claims instantly using advanced AI verification systems.", icon: "🛡️" },
-  { id: 2, title: "24/7 Customer Support", desc: "Real-time human + AI support anytime from anywhere.", icon: "💬" },
-  { id: 3, title: "Fast Claim Processing", desc: "Verification and processing completed within minutes.", icon: "⚡" },
-  { id: 4, title: "Smart Policy Tracking", desc: "Track and manage all policies from one dashboard.", icon: "📄" },
-  { id: 5, title: "Advanced Security", desc: "Military-grade encryption for secure insurance management.", icon: "🔒" },
-  { id: 6, title: "AI Voice Assistant", desc: "Smart multilingual voice support for quick assistance.", icon: "🎙️" },
+export const whyChooseFeatures = [
+  { id: 1, slug: "ai-fraud-detection", title: "AI Fraud Detection", desc: "Detect suspicious claims instantly using advanced AI verification systems.", icon: "🛡️" },
+  { id: 2, slug: "customer-support", title: "24/7 Customer Support", desc: "Real-time human + AI support anytime from anywhere.", icon: "💬" },
+  { id: 3, slug: "fast-claim-processing", title: "Fast Claim Processing", desc: "Verification and processing completed within minutes.", icon: "⚡" },
+  { id: 4, slug: "smart-policy-tracking", title: "Smart Policy Tracking", desc: "Track and manage all policies from one dashboard.", icon: "📄" },
+  { id: 5, slug: "advanced-security", title: "Advanced Security", desc: "Military-grade encryption for secure insurance management.", icon: "🔒" },
+  { id: 6, slug: "ai-voice-assistant", title: "AI Voice Assistant", desc: "Smart multilingual voice support for quick assistance.", icon: "🎙️" },
 ];
 
 const InsuranceSlider = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="w-full bg-white py-20 overflow-hidden">
       {/* Change the carousel eyebrow and heading here. */}
@@ -44,7 +47,7 @@ const InsuranceSlider = () => {
           className="!overflow-visible"
         >
           {/* Duplicate the array items to ensure the loop never "stacks" or gaps */}
-          {[...features, ...features].map((item, index) => (
+          {[...whyChooseFeatures, ...whyChooseFeatures].map((item, index) => (
             <SwiperSlide
               key={index}
               className="!w-[82vw] sm:!w-[320px] md:!w-[380px]" // Adjusted width for better focus
@@ -95,7 +98,11 @@ const InsuranceSlider = () => {
                   </div>
 
                   {/* Bottom: Link */}
-                  <button className={`text-sm font-bold flex items-center gap-2 transition-all ${isActive ? 'text-blue-600' : 'text-slate-300'}`}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/why-choose/${item.slug}`)}
+                    className={`inline-flex cursor-pointer items-center gap-2 text-sm font-bold transition-all hover:text-blue-700 ${isActive ? 'text-blue-600' : 'text-slate-300'}`}
+                  >
                     Learn More {isActive ? '→' : ''}
                   </button>
                 </div>

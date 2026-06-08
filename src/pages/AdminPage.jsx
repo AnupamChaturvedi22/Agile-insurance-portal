@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   BadgeCheck,
   BarChart3,
   Bell,
@@ -9,6 +10,7 @@ import {
   CreditCard,
   Download,
   Edit3,
+  Eraser,
   Eye,
   FileText,
   Headphones,
@@ -23,6 +25,7 @@ import {
   MessageSquare,
   PieChart,
   Plus,
+  Save,
   Search,
   Send,
   Settings,
@@ -141,6 +144,39 @@ const documents = [
   { type: "Claim Documents", owner: "Sana Khan", status: "Verification" },
 ];
 
+const adminSettingCards = [
+  { id: "general", title: "General Setting", description: "Configure the fundamental information of the site.", icon: Settings },
+  { id: "branding", title: "Logo and Favicon", description: "Upload your logo and favicon here.", icon: LayoutDashboard },
+  { id: "configuration", title: "System Configuration", description: "Control all of the basic modules of the system.", icon: UserCog },
+  { id: "notifications", title: "Notification Setting", description: "Control and configure overall notification elements of the system.", icon: Bell },
+  { id: "payment", title: "Payment Gateways", description: "Configure automatic or manual payment gateways to accept payment from users.", icon: CreditCard },
+  { id: "withdrawals", title: "Withdrawals Methods", description: "Set up manual withdrawal methods for payout requests.", icon: KeyRound },
+  { id: "forms", title: "Policy Forms", description: "Generate forms for different policies.", icon: ClipboardCheck },
+  { id: "features", title: "Manage Features", description: "Generate features for different plans.", icon: Edit3 },
+  { id: "regulations", title: "Policy Regulations", description: "Define what will and will not be covered in plans.", icon: AlertTriangle },
+  { id: "seo", title: "SEO Configuration", description: "Configure meta title, description, and keywords.", icon: LineChart },
+  { id: "frontend", title: "Manage Frontend", description: "Control all frontend contents of the system.", icon: Smartphone },
+  { id: "pages", title: "Manage Pages", description: "Control dynamic and static pages of the system.", icon: FileText },
+  { id: "kyc", title: "KYC Setting", description: "Configure client information fields.", icon: ShieldCheck },
+  { id: "social", title: "Social Login Setting", description: "Provide required social login information.", icon: Users },
+  { id: "language", title: "Language", description: "Configure languages and keywords to localize the system.", icon: MessageSquare },
+  { id: "extensions", title: "Extensions", description: "Manage extensions of the system.", icon: Plus },
+  { id: "policyPages", title: "Policy Pages", description: "Configure policy and terms of the system.", icon: Lock },
+  { id: "maintenance", title: "Maintenance Mode", description: "Enable or disable maintenance mode when required.", icon: Settings },
+  { id: "cookie", title: "GDPR Cookie", description: "Set GDPR cookie policy for visitors.", icon: CheckCircle2 },
+  { id: "css", title: "Custom CSS", description: "Write custom CSS for frontend styles.", icon: FileText },
+  { id: "sitemap", title: "Sitemap XML", description: "Insert sitemap XML to enhance SEO performance.", icon: LayoutDashboard },
+  { id: "robots", title: "Robots txt", description: "Insert robots.txt content for web crawlers.", icon: FileText },
+];
+
+const reportTemplates = [
+  { id: "claims-report", title: "Claims Report", category: "Claims", owner: "Claims Office", status: "Ready", pages: 7 },
+  { id: "revenue-report", title: "Revenue Report", category: "Finance", owner: "Accounts", status: "Ready", pages: 5 },
+  { id: "user-growth-report", title: "User Growth Report", category: "Users", owner: "Operations", status: "Draft", pages: 4 },
+  { id: "policy-sales-report", title: "Policy Sales Report", category: "Policies", owner: "Sales", status: "Ready", pages: 6 },
+  { id: "agent-performance-report", title: "Agent Performance Report", category: "Agents", owner: "Management", status: "Review", pages: 8 },
+];
+
 const policyPlans = [
   { name: "Health Secure Plus", type: "Health", coverage: "INR 25L", premium: "INR 1,850/mo", duration: "1 year", state: "Active" },
   { name: "Drive Shield Elite", type: "Motor", coverage: "IDV based", premium: "INR 9,600/yr", duration: "1 year", state: "Active" },
@@ -163,6 +199,7 @@ const pageTitles = {
   audit: "Audit Logs",
   profile: "Admin Profile",
   settings: "System Settings",
+  editor: "Markup Editor",
 };
 
 const safeJsonParse = (value, fallback) => {
@@ -673,6 +710,11 @@ const AdminPage = () => {
   const [adminReply, setAdminReply] = useState("");
   const [auditLogs, setAuditLogs] = useState(readAuditLogs);
   const [systemSettings, setSystemSettings] = useState(readSystemSettings);
+  const [editorTarget, setEditorTarget] = useState(null);
+  const [editorTool, setEditorTool] = useState("pen");
+  const [editorColor, setEditorColor] = useState("#dc2626");
+  const [editorMarks, setEditorMarks] = useState([]);
+  const [draftMark, setDraftMark] = useState(null);
   const [detail, setDetail] = useState({
     title: "Admin Activity",
     body: "Select a row or action to view operational context here.",
@@ -704,6 +746,70 @@ const AdminPage = () => {
     setActivePage(page);
     setMobileOpen(false);
     setDetail({ title: pageTitles[page], body: `You opened ${pageTitles[page]} as ${selectedProfile.role}.`, photo: "" });
+  };
+
+  const getEditorPoint = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * 100,
+      y: ((event.clientY - rect.top) / rect.height) * 100,
+    };
+  };
+
+  const openMarkupEditor = (target, type) => {
+    const title = target.title || target.type || target.id || target.name || "Report";
+    setEditorTarget({ ...target, editorType: type, title });
+    setEditorMarks(Array.isArray(target.markups) ? target.markups : []);
+    setDraftMark(null);
+    setActivePage("editor");
+    setDetail({ title: `Editing ${title}`, body: "Use pen, eraser, and color controls to mark mistakes for correction.", photo: "" });
+  };
+
+  const startMarkup = (event) => {
+    if (!editorTarget) return;
+    if (editorTool === "eraser") {
+      setEditorMarks((marks) => marks.slice(0, -1));
+      return;
+    }
+    const point = getEditorPoint(event);
+    setDraftMark({ id: uid("mark"), color: editorColor, points: [point] });
+  };
+
+  const continueMarkup = (event) => {
+    if (!draftMark || editorTool !== "pen") return;
+    const point = getEditorPoint(event);
+    setDraftMark((mark) => ({ ...mark, points: [...mark.points, point] }));
+  };
+
+  const finishMarkup = () => {
+    if (!draftMark) return;
+    setEditorMarks((marks) => [...marks, draftMark]);
+    setDraftMark(null);
+  };
+
+  const saveMarkupEditor = () => {
+    if (!editorTarget) return;
+    const targetKey = editorTarget.id || `${editorTarget.type}-${editorTarget.owner}` || editorTarget.title;
+    const updatedTarget = { ...editorTarget, markups: editorMarks, status: editorMarks.length ? "Marked" : editorTarget.status };
+
+    if (editorTarget.editorType === "document") {
+      setDocumentRows((rows) =>
+        rows.map((row) => (`${row.type}-${row.owner}` === `${editorTarget.type}-${editorTarget.owner}` ? updatedTarget : row)),
+      );
+    }
+
+    if (editorTarget.editorType === "claim") {
+      updateClaimRows(
+        (rows) => rows.map((row) => (row.id === editorTarget.id ? { ...row, markups: editorMarks, status: editorMarks.length ? "Documents" : row.status } : row)),
+        "Claim report marked",
+        editorTarget.id,
+        `${editorMarks.length} markup notes saved by ${selectedProfile.name}.`,
+      );
+    } else {
+      addAudit("Report markup saved", targetKey, `${editorMarks.length} markup notes saved by ${selectedProfile.name}.`);
+    }
+
+    runAction("Markup saved", `${editorMarks.length} correction mark${editorMarks.length === 1 ? "" : "s"} saved for ${editorTarget.title}.`);
   };
 
   const addAudit = (action, target, details = "") => {
@@ -940,7 +1046,15 @@ const AdminPage = () => {
           )
         }
       />
-      <ActionButton icon={Edit3} label="Edit" onClick={() => runAction("Edit started", `${selectedProfile.name} is editing ${target.id || target.name || target.user}.`)} />
+      <ActionButton
+        icon={Edit3}
+        label="Edit"
+        onClick={() =>
+          kind === "claims" || kind === "documents"
+            ? openMarkupEditor(target, kind === "claims" ? "claim" : "document")
+            : runAction("Edit started", `${selectedProfile.name} is editing ${target.id || target.name || target.user}.`)
+        }
+      />
       <ActionButton icon={CheckCircle2} label="Approve" onClick={() => mutateRows(kind, target, "approve")} />
       <ActionButton icon={Trash2} label="Delete" onClick={() => mutateRows(kind, target, "delete")} />
     </div>
@@ -1365,8 +1479,22 @@ const AdminPage = () => {
                   <span className={`rounded-lg px-2 py-1 text-xs font-black ring-1 ${statusClass(doc.status)}`}>{doc.status}</span>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {["View", "Approve", "Reject", "Request Re-upload"].map((action) => (
-                    <button key={action} onClick={() => action === "Approve" ? mutateRows("documents", doc, "approve") : action === "Reject" ? mutateRows("documents", doc, "delete") : runAction(`${action} document`, `${action} selected for ${doc.type}.`)} className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-black transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700">{action}</button>
+                  {["View", "Edit", "Approve", "Reject", "Request Re-upload"].map((action) => (
+                    <button
+                      key={action}
+                      onClick={() =>
+                        action === "Approve"
+                          ? mutateRows("documents", doc, "approve")
+                          : action === "Reject"
+                            ? mutateRows("documents", doc, "delete")
+                            : action === "Edit"
+                              ? openMarkupEditor(doc, "document")
+                              : runAction(`${action} document`, `${action} selected for ${doc.type}.`)
+                      }
+                      className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-black transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                    >
+                      {action}
+                    </button>
                   ))}
                 </div>
               </article>
@@ -1398,8 +1526,20 @@ const AdminPage = () => {
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <SectionTitle icon={BarChart3} title="Reports & Analytics" />
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {["Claims Report", "Revenue Report", "User Growth Report", "Policy Sales Report", "Agent Performance Report"].map((report) => (
-              <button key={report} onClick={() => runAction("Report opened", `${report} opened.`)} className="rounded-lg border border-slate-200 p-4 text-left font-black hover:bg-slate-50">{report}</button>
+            {reportTemplates.map((report) => (
+              <article key={report.id} className="rounded-lg border border-slate-200 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-black text-slate-950">{report.title}</div>
+                    <div className="mt-1 text-xs font-semibold text-slate-500">{report.category} - {report.pages} pages</div>
+                  </div>
+                  <span className={`rounded-lg px-2 py-1 text-xs font-black ring-1 ${statusClass(report.status)}`}>{report.status}</span>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button onClick={() => runAction("Report opened", report)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-black hover:bg-slate-50">View</button>
+                  <button onClick={() => openMarkupEditor(report, "report")} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-black hover:bg-slate-50"><Edit3 size={14} />Edit</button>
+                </div>
+              </article>
             ))}
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -1436,6 +1576,110 @@ const AdminPage = () => {
               )) : (
                 <div className="border-t border-slate-200 px-4 py-8 text-center text-sm font-bold text-slate-500">No audit entries yet.</div>
               )}
+            </div>
+          </div>
+        </section>
+      );
+    }
+    if (activePage === "editor") {
+      const marks = draftMark ? [...editorMarks, draftMark] : editorMarks;
+      const previewRows = [
+        ["Record", editorTarget?.title || "Selected report"],
+        ["Owner", editorTarget?.owner || editorTarget?.user || "Admin review"],
+        ["Type", editorTarget?.category || editorTarget?.policy || editorTarget?.type || "Report"],
+        ["Status", editorTarget?.status || "Review"],
+        ["Reviewer", selectedProfile.name],
+      ];
+
+      return (
+        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <SectionTitle
+            icon={Edit3}
+            title="Report Markup Editor"
+            action={
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => openPage(editorTarget?.editorType === "document" ? "documents" : editorTarget?.editorType === "claim" ? "claims" : "reports")} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-black text-slate-700 hover:bg-slate-50"><ArrowLeft size={16} />Back</button>
+                <button onClick={saveMarkupEditor} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-black text-white hover:bg-blue-700"><Save size={16} />Save Marks</button>
+              </div>
+            }
+          />
+
+          <div className="mt-5 grid gap-5 xl:grid-cols-[260px_1fr]">
+            <aside className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div className="text-sm font-black text-slate-950">Tools</div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button onClick={() => setEditorTool("pen")} className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-black ${editorTool === "pen" ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 bg-white text-slate-700"}`}><Edit3 size={16} />Pen</button>
+                <button onClick={() => setEditorTool("eraser")} className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-black ${editorTool === "eraser" ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 bg-white text-slate-700"}`}><Eraser size={16} />Eraser</button>
+              </div>
+              <div className="mt-5 text-xs font-black uppercase tracking-wide text-slate-500">Colour</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {["#dc2626", "#2563eb", "#16a34a", "#f59e0b", "#111827"].map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setEditorColor(color)}
+                    className={`h-9 w-9 rounded-lg border-2 ${editorColor === color ? "border-slate-950" : "border-white"} shadow-sm ring-1 ring-slate-200`}
+                    style={{ backgroundColor: color }}
+                    aria-label={`Use ${color}`}
+                  />
+                ))}
+              </div>
+              <button onClick={() => setEditorMarks((marks) => marks.slice(0, -1))} className="mt-5 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-black text-slate-700 hover:bg-slate-100">Undo Last Mark</button>
+              <button onClick={() => setEditorMarks([])} className="mt-2 w-full rounded-lg border border-rose-200 bg-white px-3 py-3 text-sm font-black text-rose-700 hover:bg-rose-50">Clear Marks</button>
+              <div className="mt-4 rounded-lg bg-white p-3 text-xs font-semibold leading-5 text-slate-500">
+                Pen draws over the report preview. Eraser removes the latest mark when you click the page.
+              </div>
+            </aside>
+
+            <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-100 p-4">
+              <div className="relative mx-auto aspect-[4/5] max-w-3xl overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
+                <div className="absolute inset-0 p-8">
+                  <div className="flex items-start justify-between gap-6 border-b border-slate-200 pb-5">
+                    <div>
+                      <div className="text-xs font-black uppercase tracking-wide text-blue-700">InsurTech Admin Review</div>
+                      <h2 className="mt-2 text-2xl font-black text-slate-950">{editorTarget?.title || "Report"}</h2>
+                      <p className="mt-2 text-sm font-semibold text-slate-500">Administrative correction copy for claim, document, and report verification.</p>
+                    </div>
+                    <div className="rounded-lg bg-blue-50 px-4 py-3 text-right text-xs font-black text-blue-700">Marked by<br />{selectedProfile.name}</div>
+                  </div>
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    {previewRows.map(([label, value]) => (
+                      <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div className="text-[11px] font-black uppercase tracking-wide text-slate-500">{label}</div>
+                        <div className="mt-1 text-sm font-black text-slate-800">{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 space-y-3">
+                    {["Customer details verified against submitted proof.", "Policy terms reviewed for coverage and exclusions.", "Evidence section checked for missing or incorrect values.", "Final admin correction notes are saved with this marked copy."].map((line, index) => (
+                      <div key={line} className="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600">
+                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-slate-900 text-xs font-black text-white">{index + 1}</span>
+                        {line}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <svg
+                  className="absolute inset-0 h-full w-full touch-none"
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                  onPointerDown={startMarkup}
+                  onPointerMove={continueMarkup}
+                  onPointerUp={finishMarkup}
+                  onPointerLeave={finishMarkup}
+                >
+                  {marks.map((mark) => (
+                    <polyline
+                      key={mark.id}
+                      fill="none"
+                      stroke={mark.color}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.3"
+                      points={mark.points.map((point) => `${point.x},${point.y}`).join(" ")}
+                    />
+                  ))}
+                </svg>
+              </div>
             </div>
           </div>
         </section>
@@ -1537,7 +1781,34 @@ const AdminPage = () => {
     return (
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <SectionTitle icon={Settings} title="System Settings" />
-        <div className="mt-5 grid gap-5 xl:grid-cols-2">
+        <div className="mt-5">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input className="h-12 w-full rounded-lg border border-slate-200 bg-white pl-11 pr-4 text-sm font-semibold outline-none focus:border-blue-500" placeholder="Search settings..." />
+          </div>
+          <div className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            {adminSettingCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <button
+                  key={card.id}
+                  onClick={() => runAction(card.title, card.description)}
+                  className="group flex min-h-24 items-center gap-4 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+                >
+                  <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-blue-600 text-white transition group-hover:bg-blue-700">
+                    <Icon size={25} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-base font-black text-slate-900">{card.title}</span>
+                    <span className="mt-1 block text-sm font-semibold leading-5 text-slate-500">{card.description}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-5 xl:grid-cols-2">
           {Object.entries(systemSettings).map(([group, values]) => (
             <div key={group} className="rounded-lg border border-slate-200 p-5">
               <div className="text-sm font-black capitalize text-slate-950">{group} Settings</div>

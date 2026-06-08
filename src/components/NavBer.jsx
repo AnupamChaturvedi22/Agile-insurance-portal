@@ -194,14 +194,16 @@ const Navbar = () => {
                 {isAuthenticated ? (user?.fullName?.split(" ")?.[0] ?? "Dashboard") : "Sign In"}
             </button>
 
-            <button
-                onClick={() => handleNav("/admin")}
-                className="flex items-center gap-2 border border-amber-300 bg-amber-50 px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-xs sm:text-sm font-semibold text-amber-700 hover:border-amber-400 hover:bg-amber-100 transition-all duration-300"
-                title="Admin Portal - Login for administrators"
-            >
-                <ShieldCheck size={16} className="sm:size-[18px]" />
-                <span>Admin</span>
-            </button>
+            {!isAuthenticated && (
+                <button
+                    onClick={() => handleNav("/admin")}
+                    className="flex items-center gap-2 border border-amber-300 bg-amber-50 px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-xs sm:text-sm font-semibold text-amber-700 hover:border-amber-400 hover:bg-amber-100 transition-all duration-300"
+                    title="Admin Portal - Login for administrators"
+                >
+                    <ShieldCheck size={16} className="sm:size-[18px]" />
+                    <span>Admin</span>
+                </button>
+            )}
             </div>
         </div>
 
@@ -242,13 +244,15 @@ const Navbar = () => {
                 Talk to Expert
                 </button>
 
-                <button
-                onClick={() => handleNav("/admin")}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 hover:bg-amber-100"
-                >
-                <ShieldCheck size={16} />
-                Admin Portal
-                </button>
+                {!isAuthenticated && (
+                    <button
+                    onClick={() => handleNav("/admin")}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 hover:bg-amber-100"
+                    >
+                    <ShieldCheck size={16} />
+                    Admin Portal
+                    </button>
+                )}
             </div>
             </div>
         )}

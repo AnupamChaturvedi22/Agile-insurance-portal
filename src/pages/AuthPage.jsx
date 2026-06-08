@@ -200,7 +200,7 @@ const AuthPage = () => {
       <div className="pointer-events-none absolute -bottom-40 left-24 h-[460px] w-[460px] rounded-full bg-indigo-600/10 blur-[120px]" />
 
       {/* Two-column layout: Auth card on left, Benefits card on right */}
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-10">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -423,7 +423,7 @@ const AuthPage = () => {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.05 }}
-          className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-6 text-white shadow-lg sm:p-8"
+          className="self-start rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 text-white shadow-lg sm:p-6"
         >
           {/* Header badge */}
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white/90">
@@ -432,15 +432,15 @@ const AuthPage = () => {
           </div>
 
           {/* Main heading */}
-          <h2 className="mt-6 text-2xl font-black tracking-tight sm:text-3xl">
+          <h2 className="mt-5 text-2xl font-black tracking-tight sm:text-3xl">
             Why Choose Agile Insurance?
           </h2>
-          <p className="mt-3 max-w-xl text-sm text-white/70 sm:text-base">
+          <p className="mt-2 max-w-xl text-sm text-white/70">
             Complete insurance solutions with verified protection, transparent pricing, and hassle-free claims processing.
           </p>
 
           {/* Features Grid */}
-          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {[
               { title: "Verified Email", desc: "Secure registration with OTP verification for account safety." },
               { title: "Wide Coverage", desc: "Insurance options for health, life, vehicle, travel, and business." },
@@ -449,17 +449,17 @@ const AuthPage = () => {
               { title: "Flexible Plans", desc: "Customizable insurance plans tailored to your needs." },
               { title: "Document Vault", desc: "Secure storage for all your insurance documents and policies." },
             ].map((x) => (
-              <div key={x.title} className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition">
+              <div key={x.title} className="rounded-xl border border-white/10 bg-white/5 p-3 transition hover:bg-white/10">
                 <div className="text-sm font-bold">{x.title}</div>
-                <div className="mt-2 text-sm text-white/70">{x.desc}</div>
+                <div className="mt-1 text-xs leading-5 text-white/70">{x.desc}</div>
               </div>
             ))}
           </div>
 
           {/* Insurance Benefits Section */}
-          <div className="mt-10 rounded-2xl border border-white/10 bg-white/5 p-5">
-            <div className="text-lg font-black mb-4">Insurance Benefits</div>
-            <div className="space-y-3">
+          <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="mb-3 text-base font-black">Insurance Benefits</div>
+            <div className="grid gap-2 sm:grid-cols-2">
               {[
                 "✓ Premium protection at affordable rates",
                 "✓ No hidden charges or surprise fees",
@@ -468,7 +468,7 @@ const AuthPage = () => {
                 "✓ Claim settlement in 24-48 hours",
                 "✓ Life-time renewal guaranteed",
               ].map((benefit, idx) => (
-                <div key={idx} className="flex items-center gap-3 text-sm text-white/80">
+                <div key={idx} className="flex items-center gap-2 text-xs text-white/80">
                   <span className="text-emerald-400 font-bold">{benefit.split("✓")[0]}✓</span>
                   <span>{benefit.split("✓")[1]}</span>
                 </div>
@@ -477,13 +477,13 @@ const AuthPage = () => {
           </div>
 
           {/* Trust Indicators */}
-          <div className="mt-8 grid grid-cols-2 gap-4 text-center">
+          <div className="mt-5 grid grid-cols-2 gap-3 text-center">
             <div className="rounded-xl bg-white/10 p-3">
-              <div className="text-2xl font-black text-emerald-400">50K+</div>
+              <div className="text-xl font-black text-emerald-400">50K+</div>
               <div className="mt-1 text-xs text-white/70">Happy Customers</div>
             </div>
             <div className="rounded-xl bg-white/10 p-3">
-              <div className="text-2xl font-black text-blue-400">4.8/5</div>
+              <div className="text-xl font-black text-blue-400">4.8/5</div>
               <div className="mt-1 text-xs text-white/70">Star Rating</div>
             </div>
           </div>
