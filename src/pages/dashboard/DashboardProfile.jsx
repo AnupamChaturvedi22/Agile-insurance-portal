@@ -97,6 +97,7 @@ const DashboardProfile = () => {
               { label: "Full name", value: user?.fullName ?? "—" },
               { label: "Email", value: user?.email ?? "—" },
               { label: "Phone", value: user?.phone ?? "—" },
+              { label: "Address", value: user?.address ?? "—" },
               { label: "Member since", value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—" },
             ].map((x) => (
               <div key={x.label} className="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-white/5">

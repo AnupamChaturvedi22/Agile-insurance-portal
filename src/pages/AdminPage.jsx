@@ -6,10 +6,12 @@ import {
   BarChart3,
   Bell,
   CheckCircle2,
+  Circle,
   ClipboardCheck,
   CreditCard,
   Download,
   Edit3,
+  Eraser,
   Eye,
   FileText,
   Headphones,
@@ -21,6 +23,7 @@ import {
   Mail,
   Menu,
   MessageSquare,
+  PenLine,
   PieChart,
   Plus,
   Search,
@@ -30,6 +33,7 @@ import {
   ShieldCheck,
   Smartphone,
   Trash2,
+  Undo2,
   UserCog,
   Users,
   X,
@@ -42,6 +46,7 @@ const STORAGE_ADMINS = "agile_insurance_admins_v1";
 const STORAGE_SUPPORT_CHATS = "agile_insurance_support_chats_v1";
 const STORAGE_AUDIT_LOGS = "agile_insurance_audit_logs_v1";
 const STORAGE_SYSTEM_SETTINGS = "agile_insurance_system_settings_v1";
+const STORAGE_DOCUMENTS = "agile_insurance_documents_v1";
 
 const defaultAdminProfiles = [
   {
@@ -150,6 +155,20 @@ const documents = [
   { type: "Medical Reports", owner: "Meera Rao", status: "Re-upload" },
   { type: "Claim Documents", owner: "Sana Khan", status: "Verification" },
 ];
+
+const readUploadedDocuments = () => {
+  const uploadedDocs = safeJsonParse(localStorage.getItem(STORAGE_DOCUMENTS), []);
+  if (!Array.isArray(uploadedDocs)) return [];
+  return uploadedDocs.map((doc, index) => ({
+    id: doc.id || `UPDOC-${index + 1}`,
+    type: doc.name || doc.type || "Uploaded Document",
+    owner: doc.owner || "Registered User",
+    status: doc.status || "Pending",
+    note: doc.createdAt ? `Uploaded ${new Date(doc.createdAt).toLocaleString()}` : "Uploaded by user",
+    dataUrl: doc.dataUrl || "",
+    mimeType: doc.mimeType || "",
+  }));
+};
 
 const adminSettingCards = [
   { id: "general", title: "General Setting", description: "Configure the fundamental information of the site.", icon: Settings },
@@ -370,6 +389,7 @@ const readRealUsers = () => {
     name: user.fullName || user.name || "Customer",
     email: user.email || "not-provided@agile.demo",
     phone: user.phone || "Not added",
+    address: user.address || "Not added",
     policies: user.policyCount ?? 0,
     status: sessionUser?.id === user.id ? "Logged In" : "Active",
     city: user.city || "Not added",
@@ -394,6 +414,7 @@ const readUserActivity = (user, adminClaims = []) => {
     email: user.email,
     phone: user.phone,
     city: user.city,
+    address: user.address || "Not added",
     loginStatus: user.status,
     policiesPurchased: Array.isArray(purchases) ? purchases.length : 0,
     claimsSubmitted: allClaims.length,
@@ -748,7 +769,10 @@ const AdminPage = () => {
   const [claimRows, setClaimRows] = useState(claims);
   const [ticketRows, setTicketRows] = useState(tickets);
   const [requirementRows, setRequirementRows] = useState(requirements);
-  const [documentRows, setDocumentRows] = useState(documents);
+  const [documentRows, setDocumentRows] = useState(() => {
+    const uploadedDocs = readUploadedDocuments();
+    return uploadedDocs.length ? [...uploadedDocs, ...documents] : documents;
+  });
   const [planRows, setPlanRows] = useState(policyPlans);
   const [auditLogs, setAuditLogs] = useState(() => loadAuditLogs());
   const [systemSettings, setSystemSettings] = useState(readSystemSettings);
@@ -761,6 +785,12 @@ const AdminPage = () => {
   const [supportChats, setSupportChats] = useState(() => readSupportChats());
   const [selectedChat, setSelectedChat] = useState(null);
   const [adminReply, setAdminReply] = useState("");
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [documentMarks, setDocumentMarks] = useState({});
+  const [markupTool, setMarkupTool] = useState("pen");
+  const [draftMark, setDraftMark] = useState(null);
+  const [auditFilter, setAuditFilter] = useState("login");
   const [detail, setDetail] = useState({
     title: "Admin Activity",
     body: "Select a row or action to view operational context here.",
@@ -811,6 +841,116 @@ const AdminPage = () => {
 
   const runAction = (title, body, photo = "") => setDetail({ title, body: formatStructuredDetail(body), photo });
 
+  const rowKeyFor = (row) => row.id || row.name || row.user || row.type;
+
+  const editFieldsByKind = {
+    users: ["name", "email", "phone", "address", "policies", "status", "city"],
+    claims: ["id", "user", "policy", "amount", "status", "officer", "description", "docName"],
+    policies: ["name", "type", "coverage", "premium", "duration", "state"],
+    documents: ["type", "owner", "status", "note"],
+    requirements: ["user", "age", "budget", "coverage", "status"],
+    support: ["id", "user", "subject", "priority", "status"],
+  };
+
+  const updateRowsForKind = (kind, updater) => {
+    const setter = {
+      users: setCustomerRows,
+      claims: setClaimRows,
+      support: setTicketRows,
+      requirements: setRequirementRows,
+      documents: setDocumentRows,
+      policies: setPlanRows,
+    }[kind];
+    if (setter) setter(updater);
+  };
+
+  const startEditRecord = (kind, target) => {
+    setEditingRecord({ kind, key: rowKeyFor(target), draft: { ...target } });
+    runAction("Edit opened", `${selectedProfile.name} is editing ${rowKeyFor(target)}.`);
+  };
+
+  const saveEditedRecord = () => {
+    if (!editingRecord) return;
+    updateRowsForKind(editingRecord.kind, (rows) =>
+      rows.map((row) => (rowKeyFor(row) === editingRecord.key ? { ...row, ...editingRecord.draft } : row)),
+    );
+    addAuditLogEntry(`/api/v4/${editingRecord.kind}/edit -> Saved changes for ${editingRecord.key}`);
+    runAction("Changes saved", `${editingRecord.key} was updated by ${selectedProfile.name}.`);
+  };
+
+  const sendEditedRecordToUser = () => {
+    if (!editingRecord) return;
+    saveEditedRecord();
+    addAuditLogEntry(`/api/v4/${editingRecord.kind}/send -> Sent edited details back to user for ${editingRecord.key}`);
+    runAction("Sent to user", {
+      record: editingRecord.key,
+      type: editingRecord.kind,
+      message: "Updated details have been sent back to the user for review.",
+    });
+  };
+
+  const currentDocumentKey = selectedDocument ? `${selectedDocument.type}-${selectedDocument.owner}` : "";
+  const currentDocumentMarks = documentMarks[currentDocumentKey] || [];
+
+  const pointFromEvent = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * 100,
+      y: ((event.clientY - rect.top) / rect.height) * 100,
+    };
+  };
+
+  const startMarkup = (event) => {
+    if (!selectedDocument) return;
+    const point = pointFromEvent(event);
+    if (markupTool === "eraser") {
+      setDocumentMarks((marks) => ({
+        ...marks,
+        [currentDocumentKey]: (marks[currentDocumentKey] || []).slice(0, -1),
+      }));
+      return;
+    }
+    setDraftMark({ id: `mark-${Date.now()}`, tool: markupTool, points: [point], color: markupTool === "circle" ? "#dc2626" : "#2563eb" });
+  };
+
+  const continueMarkup = (event) => {
+    if (!draftMark || markupTool !== "pen") return;
+    const point = pointFromEvent(event);
+    setDraftMark((mark) => ({ ...mark, points: [...mark.points, point] }));
+  };
+
+  const finishMarkup = (event) => {
+    if (!draftMark || !selectedDocument) return;
+    const endPoint = pointFromEvent(event);
+    const completedMark = draftMark.tool === "circle" ? { ...draftMark, points: [draftMark.points[0], endPoint] } : draftMark;
+    setDocumentMarks((marks) => ({
+      ...marks,
+      [currentDocumentKey]: [...(marks[currentDocumentKey] || []), completedMark],
+    }));
+    setDraftMark(null);
+  };
+
+  const undoDocumentMark = () => {
+    if (!selectedDocument) return;
+    setDocumentMarks((marks) => ({
+      ...marks,
+      [currentDocumentKey]: (marks[currentDocumentKey] || []).slice(0, -1),
+    }));
+  };
+
+  const sendDocumentCorrection = () => {
+    if (!selectedDocument) return;
+    setDocumentRows((rows) =>
+      rows.map((doc) =>
+        `${doc.type}-${doc.owner}` === currentDocumentKey
+          ? { ...doc, status: "Re-upload Requested", note: "Marked corrections sent by admin." }
+          : doc,
+      ),
+    );
+    addAuditLogEntry(`/api/v4/documents/markup/send -> Sent correction marks for ${currentDocumentKey}`);
+    runAction("Document sent back", `${selectedDocument.owner} will see the marked corrections for ${selectedDocument.type}.`);
+  };
+
   const refreshRealUsers = () => {
     const realUsers = readRealUsers();
     setCustomerRows(realUsers.length ? realUsers : users);
@@ -823,11 +963,13 @@ const AdminPage = () => {
       name: "New Customer",
       email: `customer${customerRows.length + 1}@agile.demo`,
       phone: "Not added",
+      address: "Not added",
       policies: 0,
       status: "Active",
       city: "Not added",
     };
     setCustomerRows((rows) => [nextUser, ...rows]);
+    setEditingRecord({ kind: "users", key: rowKeyFor(nextUser), draft: { ...nextUser } });
     addAuditLogEntry(`/api/v4/users/create -> Added customer profile: ${nextUser.email}`);
     runAction("User created", `${nextUser.name} was added by ${selectedProfile.name}.`);
   };
@@ -849,16 +991,20 @@ const AdminPage = () => {
   const createClaim = () => {
     const nextClaim = {
       id: `CLM${Date.now().toString().slice(-4)}`,
-      // FIX 5: customerRows is an array, use customerRows[0]?.name
       user: customerRows[0]?.name || "New Customer",
+      email: customerRows[0]?.email || "not-provided@agile.demo",
+      phone: customerRows[0]?.phone || "Not added",
       policy: "Health",
       amount: "INR 25,000",
       status: "Pending",
       officer: selectedProfile.name,
+      description: "Claim created from admin portal.",
+      docName: "Documents pending",
     };
     setClaimRows((rows) => [nextClaim, ...rows]);
+    setEditingRecord({ kind: "claims", key: rowKeyFor(nextClaim), draft: { ...nextClaim } });
     addAuditLogEntry(`/api/v4/claims/create -> Opened claim sheet: ${nextClaim.id}`);
-    runAction("Claim created", `${nextClaim.id} was created and assigned to ${selectedProfile.name}.`);
+    runAction("Claim created", `${nextClaim.id} was created. Add or edit customer name, policy, amount, documents, and notes before sending.`);
   };
 
   const createTicket = () => {
@@ -1131,11 +1277,67 @@ const AdminPage = () => {
           )
         }
       />
-      <ActionButton icon={Edit3} label="Edit" onClick={() => runAction("Edit started", `${selectedProfile.name} is editing ${target.id || target.name || target.user}.`)} />
+      <ActionButton icon={Edit3} label="Edit" onClick={() => startEditRecord(kind, target)} />
       <ActionButton icon={CheckCircle2} label="Approve" onClick={() => mutateRows(kind, target, "approve")} />
       <ActionButton icon={Trash2} label="Delete" onClick={() => mutateRows(kind, target, "delete")} />
     </div>
   );
+
+  const renderEditPanel = () => {
+    if (!editingRecord) return null;
+    const fields = editFieldsByKind[editingRecord.kind] || Object.keys(editingRecord.draft);
+
+    return (
+      <section className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-sm font-black text-blue-950">Edit {editingRecord.kind}</div>
+            <div className="mt-1 text-xs font-bold text-blue-700">Make changes, save locally, or send the edited details back to the user.</div>
+          </div>
+          <button onClick={() => setEditingRecord(null)} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">
+            <X size={14} />
+            Close
+          </button>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {fields.map((field) => (
+            <label key={field} className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-blue-700">{field.replace(/([A-Z])/g, " $1")}</span>
+              <input
+                value={editingRecord.draft[field] ?? ""}
+                onChange={(event) =>
+                  setEditingRecord((record) => ({
+                    ...record,
+                    draft: {
+                      ...record.draft,
+                      [field]: field === "policies" || field === "age" ? Number(event.target.value) : event.target.value,
+                    },
+                  }))
+                }
+                className="mt-2 h-11 w-full rounded-lg border border-blue-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500"
+              />
+            </label>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={saveEditedRecord} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700">
+            Save Changes
+          </button>
+          <button onClick={sendEditedRecordToUser} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-700">
+            <Send size={15} />
+            Send to User
+          </button>
+        </div>
+      </section>
+    );
+  };
+
+  const isLoginAudit = (log) => {
+    const action = log.action.toLowerCase();
+    return action.includes("login") || action.includes("auth");
+  };
+
+  const visibleAuditLogs = auditLogs.filter((log) => (auditFilter === "login" ? isLoginAudit(log) : !isLoginAudit(log)));
 
   const renderDashboard = () => (
     <div className="space-y-6">
@@ -1254,7 +1456,7 @@ const AdminPage = () => {
           <div className="mt-4 rounded-lg bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800">
             Showing real app profiles from registration/login storage. Active users: {activeUsers}.
           </div>
-          <DataTable columns={["id", "name", "email", "phone", "policies", "status", "city"]} rows={customerRows} renderActions={(row) => actionButtons(row, "users")} />
+          <DataTable columns={["id", "name", "email", "phone", "address", "policies", "status", "city"]} rows={customerRows} renderActions={(row) => actionButtons(row, "users")} />
         </section>
       );
     }
@@ -1299,8 +1501,8 @@ const AdminPage = () => {
                   <span className={`rounded-lg px-2 py-1 text-xs font-black ring-1 ${statusClass(req.status)}`}>{req.status}</span>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {["Suggest Policies", "Generate Quotes", "Approve", "Delete"].map((action) => (
-                    <button key={action} onClick={() => action === "Approve" ? mutateRows("requirements", req, "approve") : action === "Delete" ? mutateRows("requirements", req, "delete") : runAction(action, `${action} for ${req.user}.`)} className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-black transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700">{action}</button>
+                  {["Edit", "Suggest Policies", "Generate Quotes", "Approve", "Delete"].map((action) => (
+                    <button key={action} onClick={() => action === "Edit" ? startEditRecord("requirements", req) : action === "Approve" ? mutateRows("requirements", req, "approve") : action === "Delete" ? mutateRows("requirements", req, "delete") : runAction(action, `${action} for ${req.user}.`)} className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-black transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700">{action}</button>
                   ))}
                 </div>
               </article>
@@ -1470,23 +1672,137 @@ const AdminPage = () => {
       return (
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <SectionTitle icon={ShieldCheck} title="Document Verification" />
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {documentRows.map((doc) => (
-              <article key={`${doc.type}-${doc.owner}`} className="rounded-lg border border-slate-200 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-black">{doc.type}</div>
-                    <div className="mt-1 text-sm font-semibold text-slate-500">{doc.owner}</div>
+          <div className="mt-5 grid gap-5 2xl:grid-cols-[360px_1fr]">
+            <div className="space-y-3">
+              {documentRows.map((doc) => {
+                const docKey = `${doc.type}-${doc.owner}`;
+                return (
+                  <article key={docKey} className={`rounded-lg border p-4 ${currentDocumentKey === docKey ? "border-blue-300 bg-blue-50" : "border-slate-200"}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-black">{doc.type}</div>
+                        <div className="mt-1 text-sm font-semibold text-slate-500">{doc.owner}</div>
+                        {doc.note && <div className="mt-2 text-xs font-bold text-rose-700">{doc.note}</div>}
+                      </div>
+                      <span className={`rounded-lg px-2 py-1 text-xs font-black ring-1 ${statusClass(doc.status)}`}>{doc.status}</span>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedDocument(doc);
+                          runAction("Document opened", `${doc.type} for ${doc.owner} is ready for admin markup.`);
+                        }}
+                        className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-black transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                      >
+                        View
+                      </button>
+                      <button onClick={() => startEditRecord("documents", doc)} className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-black transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700">Edit</button>
+                      <button onClick={() => mutateRows("documents", doc, "approve")} className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-black transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700">Approve</button>
+                      <button onClick={() => mutateRows("documents", doc, "delete")} className="cursor-pointer rounded-lg border border-rose-200 px-3 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-50">Reject</button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              {selectedDocument ? (
+                <>
+                  <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <div className="text-sm font-black text-slate-950">{selectedDocument.type} Review</div>
+                      <div className="mt-1 text-xs font-bold text-slate-500">{selectedDocument.owner}</div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: "pen", label: "Pen", icon: PenLine },
+                        { id: "circle", label: "Circle", icon: Circle },
+                        { id: "eraser", label: "Eraser", icon: Eraser },
+                      ].map((tool) => {
+                        const ToolIcon = tool.icon;
+                        return (
+                          <button
+                            key={tool.id}
+                            onClick={() => setMarkupTool(tool.id)}
+                            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-black transition ${
+                              markupTool === tool.id ? "border-blue-300 bg-blue-600 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                            }`}
+                          >
+                            <ToolIcon size={14} />
+                            {tool.label}
+                          </button>
+                        );
+                      })}
+                      <button onClick={undoDocumentMark} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">
+                        <Undo2 size={14} />
+                        Undo
+                      </button>
+                      <button onClick={sendDocumentCorrection} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700">
+                        <Send size={14} />
+                        Send Back
+                      </button>
+                    </div>
                   </div>
-                  <span className={`rounded-lg px-2 py-1 text-xs font-black ring-1 ${statusClass(doc.status)}`}>{doc.status}</span>
+
+                  <div className="mt-4">
+                    <div className="relative mx-auto aspect-[4/5] max-w-3xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                      <div className="absolute inset-0 bg-white">
+                        {selectedDocument.dataUrl ? (
+                          selectedDocument.mimeType?.startsWith("image/") ? (
+                            <img src={selectedDocument.dataUrl} alt={selectedDocument.type} className="h-full w-full object-contain" />
+                          ) : (
+                            <iframe title={selectedDocument.type} src={selectedDocument.dataUrl} className="h-full w-full border-0" />
+                          )
+                        ) : (
+                          <div className="h-full p-8">
+                            <div className="border-b border-slate-200 pb-4">
+                              <div className="text-xs font-black uppercase tracking-wide text-blue-700">Submitted User Document</div>
+                              <div className="mt-2 text-2xl font-black text-slate-950">{selectedDocument.type}</div>
+                              <div className="mt-1 text-sm font-bold text-slate-500">Owner: {selectedDocument.owner}</div>
+                            </div>
+                            <div className="mt-6 grid gap-3 text-sm font-semibold text-slate-600">
+                              {["Identity fields verified against user profile.", "Policy or claim reference checked by admin.", "Missing or incorrect areas can be circled before sending back.", "User receives the correction request after Send Back."].map((line, index) => (
+                                <div key={line} className="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-3">
+                                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-slate-900 text-xs font-black text-white">{index + 1}</span>
+                                  {line}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <svg
+                        className="absolute inset-0 h-full w-full touch-none"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                        onPointerDown={startMarkup}
+                        onPointerMove={continueMarkup}
+                        onPointerUp={finishMarkup}
+                      >
+                        {[...currentDocumentMarks, ...(draftMark ? [draftMark] : [])].map((mark) => {
+                          if (mark.tool === "circle") {
+                            const [start, end = start] = mark.points;
+                            const x = Math.min(start.x, end.x);
+                            const y = Math.min(start.y, end.y);
+                            const width = Math.max(Math.abs(end.x - start.x), 2);
+                            const height = Math.max(Math.abs(end.y - start.y), 2);
+                            return <ellipse key={mark.id} cx={x + width / 2} cy={y + height / 2} rx={width / 2} ry={height / 2} fill="none" stroke={mark.color} strokeWidth="1.2" />;
+                          }
+                          return <polyline key={mark.id} fill="none" stroke={mark.color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" points={mark.points.map((point) => `${point.x},${point.y}`).join(" ")} />;
+                        })}
+                      </svg>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="grid min-h-[420px] place-items-center rounded-lg border border-dashed border-slate-300 bg-white text-center">
+                  <div>
+                    <div className="text-sm font-black text-slate-800">Select a document</div>
+                    <div className="mt-1 text-xs font-semibold text-slate-500">Use View to open the markup workspace.</div>
+                  </div>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {["View", "Approve", "Reject", "Request Re-upload"].map((action) => (
-                    <button key={action} onClick={() => action === "Approve" ? mutateRows("documents", doc, "approve") : action === "Reject" ? mutateRows("documents", doc, "delete") : runAction(`${action} document`, `${action} selected for ${doc.type}.`)} className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-black transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700">{action}</button>
-                  ))}
-                </div>
-              </article>
-            ))}
+              )}
+            </div>
           </div>
         </section>
       );
@@ -1650,13 +1966,30 @@ const AdminPage = () => {
           <div className="mt-5 grid grid-cols-3 gap-4">
             {[
               { label: "Total Events", value: auditLogs.length, color: "text-blue-700", bg: "bg-blue-50" },
-              { label: "Login Events", value: auditLogs.filter(l => l.action.toLowerCase().includes("login") || l.action.toLowerCase().includes("auth")).length, color: "text-emerald-700", bg: "bg-emerald-50" },
-              { label: "Data Mutations", value: auditLogs.filter(l => !l.action.toLowerCase().includes("login") && !l.action.toLowerCase().includes("auth")).length, color: "text-amber-700", bg: "bg-amber-50" },
+              { label: "Login Events", value: auditLogs.filter(isLoginAudit).length, color: "text-emerald-700", bg: "bg-emerald-50" },
+              { label: "Insurance Events", value: auditLogs.filter((log) => !isLoginAudit(log)).length, color: "text-amber-700", bg: "bg-amber-50" },
             ].map((stat) => (
               <div key={stat.label} className={`rounded-lg ${stat.bg} p-4`}>
                 <div className={`text-2xl font-black ${stat.color}`}>{stat.value}</div>
                 <div className="mt-1 text-xs font-bold text-slate-600">{stat.label}</div>
               </div>
+            ))}
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            {[
+              { id: "login", label: "Login Audit" },
+              { id: "insurance", label: "Claim, Policy, User & Insurance Audit" },
+            ].map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => setAuditFilter(filter.id)}
+                className={`rounded-lg px-4 py-2 text-sm font-black transition ${
+                  auditFilter === filter.id ? "bg-blue-600 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {filter.label}
+              </button>
             ))}
           </div>
 
@@ -1672,10 +2005,8 @@ const AdminPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {auditLogs.map((log, index) => {
-                  const isLogin =
-                    log.action.toLowerCase().includes("login") ||
-                    log.action.toLowerCase().includes("auth");
+                {visibleAuditLogs.map((log, index) => {
+                  const isLogin = isLoginAudit(log);
                   return (
                     <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3.5 text-xs font-black text-slate-400">{index + 1}</td>
@@ -1713,6 +2044,13 @@ const AdminPage = () => {
                     </tr>
                   );
                 })}
+                {visibleAuditLogs.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-sm font-bold text-slate-500">
+                      No {auditFilter === "login" ? "login" : "insurance activity"} audit records yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -1869,6 +2207,7 @@ const AdminPage = () => {
 
           <div className="grid min-h-0 flex-1 xl:grid-cols-[minmax(0,1fr)_340px]">
             <section className="scrollbar-none min-h-0 overflow-y-auto p-4 sm:p-6">
+              {renderEditPanel()}
               {renderPage()}
             </section>
 

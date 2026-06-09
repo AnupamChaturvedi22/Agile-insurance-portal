@@ -6,7 +6,6 @@ const STORAGE_SESSION = "agile_insurance_session_v1";
 const STORAGE_LEGACY = "agile_insurance_auth_v1";
 const STORAGE_USERS = "agile_insurance_users_v1";
 const STORAGE_PENDING = "agile_insurance_pending_user_v1";
-const DEMO_OTP = "123456";
 
 // Auth provider is now frontend-only and stores demo users in localStorage.
 const safeJsonParse = (value, fallback) => {
@@ -34,6 +33,8 @@ const saveSession = (nextUser) => {
   localStorage.setItem(STORAGE_SESSION, JSON.stringify({ user: nextUser }));
 };
 
+const createOtp = () => String(Math.floor(100000 + Math.random() * 900000));
+
 const bootstrapUser = () => {
   const legacy = localStorage.getItem(STORAGE_LEGACY);
   if (legacy) {
@@ -54,12 +55,13 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => bootstrapUser());
   const [bootstrapped] = useState(true);
 
-  const register = async ({ fullName, email, phone, password }) => {
+  const register = async ({ fullName, email, phone, address, password }) => {
     const users = readUsers();
     if (users.some((u) => u.email === email)) {
       throw new Error("An account with this email already exists.");
     }
 
+    const otp = createOtp();
     localStorage.setItem(
       STORAGE_PENDING,
       JSON.stringify({
@@ -67,18 +69,21 @@ export const AuthProvider = ({ children }) => {
         fullName,
         email,
         phone,
+        address,
         password,
+        otp,
+        otpSentAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       }),
     );
 
-    return { message: `Demo OTP is ${DEMO_OTP}. Enter it below to verify your account.` };
+    return { message: `OTP ${otp} was sent to ${email}. Enter it below to verify your account.` };
   };
 
   const verifyOtp = async ({ email, otp }) => {
     const pending = safeJsonParse(localStorage.getItem(STORAGE_PENDING), null);
     if (!pending || pending.email !== email) throw new Error("No pending registration found for this email.");
-    if (otp !== DEMO_OTP) throw new Error("Invalid OTP. Use 123456 for this frontend demo.");
+    if (otp !== pending.otp) throw new Error("Invalid OTP. Enter the latest code sent to your email.");
 
     const users = readUsers();
     const verifiedUser = {
@@ -86,6 +91,7 @@ export const AuthProvider = ({ children }) => {
       fullName: pending.fullName,
       email: pending.email,
       phone: pending.phone,
+      address: pending.address || "",
       createdAt: pending.createdAt,
     };
 
@@ -106,6 +112,7 @@ export const AuthProvider = ({ children }) => {
       fullName: match.fullName,
       email: match.email,
       phone: match.phone,
+      address: match.address || "",
       createdAt: match.createdAt,
     };
 
@@ -120,6 +127,7 @@ export const AuthProvider = ({ children }) => {
       fullName: "Google User",
       email: "google-user@agileclaim.demo",
       phone: "",
+      address: "",
       createdAt: new Date().toISOString(),
     };
     saveSession(googleUser);

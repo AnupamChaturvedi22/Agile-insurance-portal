@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { KeyRound, Lock, Mail, Phone, ShieldCheck, User } from "lucide-react";
+import { KeyRound, Lock, Mail, MapPin, Phone, ShieldCheck, User } from "lucide-react";
 import { useAuth } from "../contexts/useAuth";
 
 // Authentication screen copy, field labels, validation messages, and auth CTAs live in this file.
@@ -53,6 +53,7 @@ const AuthPage = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [otp, setOtp] = useState("");
@@ -71,6 +72,7 @@ const AuthPage = () => {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedName = fullName.trim();
     const trimmedPhone = phone.trim();
+    const trimmedAddress = address.trim();
 
     if (mode === "register" && otpStep) {
       if (!/^\d{6}$/.test(otp.trim())) return setError("Enter the 6-digit OTP.");
@@ -90,13 +92,14 @@ const AuthPage = () => {
       if (!trimmedName) return setError("Full Name is required.");
       if (!validateEmail(trimmedEmail)) return setError("Enter a valid email address.");
       if (!/^\d{10}$/.test(trimmedPhone)) return setError("Enter a valid 10-digit phone number.");
+      if (!trimmedAddress) return setError("Address is required.");
       if (password.length < 6) return setError("Password must be at least 6 characters.");
       if (password !== confirmPassword) return setError("Passwords do not match.");
       setBusy(true);
       try {
-        const response = await register({ fullName: trimmedName, email: trimmedEmail, phone: trimmedPhone, password });
+        const response = await register({ fullName: trimmedName, email: trimmedEmail, phone: trimmedPhone, address: trimmedAddress, password });
         setOtpStep(true);
-        setNotice(response.message || "A 6-digit OTP was sent to your email. Enter it below to verify your account.");
+        setNotice(response.message || "A fresh 6-digit OTP was sent to your email. Enter it below to verify your account.");
       } catch (err) {
         setError(err?.message || "Registration failed.");
       } finally {
@@ -255,6 +258,21 @@ const AuthPage = () => {
                   </div>
                 </label>
               </div>
+            )}
+
+            {mode === "register" && !otpStep && (
+              <label className="block space-y-2">
+                <span className="text-xs font-semibold text-slate-700">Address</span>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-12 py-4 text-sm font-medium text-slate-800 shadow-sm outline-none placeholder:text-slate-400 focus:border-blue-500"
+                    placeholder="House / street / city"
+                  />
+                </div>
+              </label>
             )}
 
             {!otpStep && (
