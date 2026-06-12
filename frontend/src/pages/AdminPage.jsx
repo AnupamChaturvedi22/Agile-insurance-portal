@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { apiRequest, getToken } from "../utils/api";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -175,7 +177,7 @@ const readUploadedDocuments = () => {
 // Developer note: add/remove System Settings tiles here; each id should match a key in settingFieldGroups.
 const adminSettingCards = [
   { id: "general", title: "General Setting", description: "Configure the fundamental information of the site.", icon: Settings },
-  { id: "branding", title: "Logo and Favicon", description: "Upload your logo and favicon here.", icon: LayoutDashboard },
+  // { id: "branding", title: "Logo and Favicon", description: "Upload your logo and favicon here.", icon: LayoutDashboard },
   { id: "configuration", title: "System Configuration", description: "Control all of the basic modules of the system.", icon: UserCog },
   { id: "notifications", title: "Notification Setting", description: "Control and configure overall notification elements of the system.", icon: Bell },
   { id: "payment", title: "Payment Gateways", description: "Configure automatic or manual payment gateways to accept payment from users.", icon: CreditCard },
@@ -184,7 +186,6 @@ const adminSettingCards = [
   { id: "features", title: "Manage Features", description: "Generate features for different plans.", icon: Edit3 },
   { id: "regulations", title: "Policy Regulations", description: "Define what will and will not be covered in plans.", icon: AlertTriangle },
   { id: "seo", title: "SEO Configuration", description: "Configure meta title, description, and keywords.", icon: LineChart },
-  { id: "frontend", title: "Manage Frontend", description: "Control all frontend contents of the system.", icon: Smartphone },
   { id: "pages", title: "Manage Pages", description: "Control dynamic and static pages of the system.", icon: FileText },
   { id: "kyc", title: "KYC Setting", description: "Configure client information fields.", icon: ShieldCheck },
   { id: "social", title: "Social Login Setting", description: "Provide required social login information.", icon: Users },
@@ -192,11 +193,7 @@ const adminSettingCards = [
   { id: "extensions", title: "Extensions", description: "Manage extensions of the system.", icon: Plus },
   { id: "policyPages", title: "Policy Pages", description: "Configure policy and terms of the system.", icon: Lock },
   { id: "maintenance", title: "Maintenance Mode", description: "Enable or disable maintenance mode when required.", icon: Settings },
-  { id: "cookie", title: "GDPR Cookie", description: "Set GDPR cookie policy for visitors.", icon: CheckCircle2 },
-  { id: "css", title: "Custom CSS", description: "Write custom CSS for frontend styles.", icon: FileText },
-  { id: "sitemap", title: "Sitemap XML", description: "Insert sitemap XML to enhance SEO performance.", icon: LayoutDashboard },
-  { id: "robots", title: "Robots txt", description: "Insert robots.txt content for web crawlers.", icon: FileText },
-];
+ ];
 
 // Developer note: edit field definitions here to change which controls appear inside each settings tile.
 const settingFieldGroups = {
@@ -206,11 +203,11 @@ const settingFieldGroups = {
     { name: "supportPhone", label: "Support Phone", type: "text", defaultValue: "+91 98765 43210" },
     { name: "serviceTaxRate", label: "Service Tax Rate (%)", type: "number", defaultValue: 18 },
   ],
-  branding: [
-    { name: "logo", label: "Logo", type: "file", accept: "image/*", defaultValue: "" },
-    { name: "favicon", label: "Favicon", type: "file", accept: "image/*", defaultValue: "" },
-    { name: "brandColor", label: "Brand Color", type: "color", defaultValue: "#2563eb" },
-  ],
+  // branding: [
+  //   { name: "logo", label: "Logo", type: "file", accept: "image/*", defaultValue: "" },
+  //   { name: "favicon", label: "Favicon", type: "file", accept: "image/*", defaultValue: "" },
+  //   { name: "brandColor", label: "Brand Color", type: "color", defaultValue: "#2563eb" },
+  // ],
   configuration: [
     { name: "claimsModule", label: "Claims Module", type: "boolean", defaultValue: true },
     { name: "paymentsModule", label: "Payments Module", type: "boolean", defaultValue: true },
@@ -257,11 +254,11 @@ const settingFieldGroups = {
     { name: "metaDescription", label: "Meta Description", type: "textarea", defaultValue: "Compare, buy, and manage insurance policies online." },
     { name: "keywords", label: "Meta Keywords", type: "textarea", defaultValue: "insurance, claims, policy, health insurance, car insurance" },
   ],
-  frontend: [
-    { name: "heroTitle", label: "Home Hero Title", type: "text", defaultValue: "Smart Insurance for Every Need" },
-    { name: "primaryCta", label: "Primary CTA", type: "text", defaultValue: "Explore Policies" },
-    { name: "showTestimonials", label: "Show Testimonials", type: "boolean", defaultValue: true },
-  ],
+  // frontend: [
+  //   { name: "heroTitle", label: "Home Hero Title", type: "text", defaultValue: "Smart Insurance for Every Need" },
+  //   { name: "primaryCta", label: "Primary CTA", type: "text", defaultValue: "Explore Policies" },
+  //   { name: "showTestimonials", label: "Show Testimonials", type: "boolean", defaultValue: true },
+  // ],
   pages: [
     { name: "aboutPage", label: "About Page", type: "boolean", defaultValue: true },
     { name: "contactPage", label: "Contact Page", type: "boolean", defaultValue: true },
@@ -282,7 +279,6 @@ const settingFieldGroups = {
   language: [
     { name: "defaultLanguage", label: "Default Language", type: "select", defaultValue: "English", options: ["English", "Hindi", "Tamil", "Bengali"] },
     { name: "multiLanguage", label: "Enable Multi Language", type: "boolean", defaultValue: false },
-    { name: "customLabels", label: "Custom Labels", type: "textarea", defaultValue: "claim=Claim\npolicy=Policy\nsupport=Support" },
   ],
   extensions: [
     { name: "analytics", label: "Analytics Extension", type: "boolean", defaultValue: true },
@@ -297,19 +293,8 @@ const settingFieldGroups = {
     { name: "enabled", label: "Maintenance Mode", type: "boolean", defaultValue: false },
     { name: "message", label: "Maintenance Message", type: "textarea", defaultValue: "The portal is temporarily under maintenance. Please check back soon." },
   ],
-  cookie: [
-    { name: "enabled", label: "GDPR Cookie Banner", type: "boolean", defaultValue: true },
-    { name: "message", label: "Cookie Message", type: "textarea", defaultValue: "We use cookies to improve your insurance portal experience." },
-  ],
-  css: [
-    { name: "customCss", label: "Custom CSS", type: "textarea", defaultValue: "body { scroll-behavior: smooth; }" },
-  ],
-  sitemap: [
-    { name: "xml", label: "Sitemap XML", type: "textarea", defaultValue: "<urlset><url><loc>https://agileinsure.in/</loc></url></urlset>" },
-  ],
-  robots: [
-    { name: "content", label: "Robots.txt Content", type: "textarea", defaultValue: "User-agent: *\nAllow: /\nSitemap: https://agileinsure.in/sitemap.xml" },
-  ],
+ 
+ 
 };
 
 const policyPlans = [
@@ -318,7 +303,6 @@ const policyPlans = [
   { name: "Term Life Max", type: "Life", coverage: "INR 1 Cr", premium: "INR 1,120/mo", duration: "30 years", state: "Draft" },
   { name: "Travel Global Care", type: "Travel", coverage: "USD 100K", premium: "INR 2,400/trip", duration: "Trip", state: "Inactive" },
 ];
-
 const claimSteps = ["Submitted", "Under Review", "Document Verification", "Approved / Rejected", "Payment Processing", "Completed"];
 
 const pageTitles = {
@@ -343,6 +327,65 @@ const safeJsonParse = (value, fallback) => {
   } catch {
     return fallback;
   }
+};
+
+const settingStorageMap = {
+  general: { prefix: null, fields: { companyName: "companyName", supportEmail: "supportEmail", supportPhone: "supportPhone", serviceTaxRate: "serviceTaxRate" } },
+  branding: { prefix: null, fields: { logo: "logoUrl", favicon: "faviconUrl", brandColor: "brandColor" } },
+  configuration: { prefix: "modules", fields: { claimsModule: "claimsModule", paymentsModule: "paymentsModule", documentsModule: "documentModule", supportModule: "supportModule" } },
+  notifications: { prefix: "notifications", fields: { emailEnabled: "emailEnabled", smsEnabled: "smsEnabled", pushEnabled: "pushEnabled", renewalReminderDays: "renewalReminderDays" } },
+  payment: { prefix: "paymentGateways", fields: { razorpay: "razorpay", upi: "upi", cards: "cards", minimumPayment: "minimumPayment" } },
+  withdrawals: { prefix: "withdrawalMethods", fields: { bankTransfer: "bankTransfer", upiPayout: "upiPayout", minimumWithdrawal: "minWithdrawal", payoutNote: "payoutInstructions" } },
+  forms: { prefix: "policyForms", fields: { healthForm: "healthInsurance", motorForm: "vehicleInsurance", lifeForm: "lifeInsurance", requiredFields: "requiredFields" } },
+  features: { prefix: "features", fields: { aiAssistant: "aiAssistant", policyCompare: "policyCompare", claimTracking: "claimTracking", voiceSupport: "voiceSupport" } },
+  regulations: { prefix: "regulations", fields: { coveredItems: "coveredItems", excludedItems: "excludedItems", highValueReviewAmount: "highvaluereviwAmt" } },
+  seo: { prefix: "seo", fields: { metaTitle: "metaTitle", metaDescription: "metaDescription", keywords: "keywords" } },
+  pages: { prefix: "pages", fields: { aboutPage: "aboutPage", contactPage: "contactPage", articlesPage: "articlesPage", pageNotice: "pageNotice" } },
+  kyc: { prefix: "kyc", fields: { aadhaarRequired: "aadhaarRequired", panRequired: "panRequired", selfieRequired: "selfieRequired", autoRejectIncomplete: "autoRejectIncompleteKYC" } },
+  social: { prefix: "socialLogin", fields: { googleLogin: "googleLogin", facebookLogin: "facebookLogin", clientId: "clientId" } },
+  language: { prefix: "language", fields: { defaultLanguage: "defaultLanguage", multiLanguage: "enableMultiLanguage" } },
+  extensions: { prefix: "extensions", fields: { analytics: "analyticsExtension", chatbot: "chatbotExtension", documentScanner: "documentScanner" } },
+  maintenance: { prefix: "maintenanceMode", fields: { enabled: "enabled", message: "message" } },
+};
+
+const getSettingValueFromStorage = (settings, settingId, field) => {
+  const config = settingStorageMap[settingId] || {};
+  const backendField = config.fields?.[field.name] || field.name;
+
+  if (config.prefix === null) {
+    return settings?.[backendField] ?? settings?.modules?.[settingId]?.[field.name] ?? field.defaultValue ?? "";
+  }
+
+  if (config.prefix === "modules") {
+    return settings?.modules?.[backendField] ?? settings?.modules?.[settingId]?.[field.name] ?? field.defaultValue ?? "";
+  }
+
+  return settings?.[config.prefix]?.[backendField] ?? settings?.modules?.[settingId]?.[field.name] ?? field.defaultValue ?? "";
+};
+
+const buildSettingPatch = (settings, settingId, field, value) => {
+  const config = settingStorageMap[settingId] || {};
+  const backendField = config.fields?.[field.name] || field.name;
+
+  if (config.prefix === null) {
+    return { [backendField]: value };
+  }
+
+  if (config.prefix === "modules") {
+    return {
+      modules: {
+        ...(settings.modules || {}),
+        [backendField]: value,
+      },
+    };
+  }
+
+  return {
+    [config.prefix]: {
+      ...(settings[config.prefix] || {}),
+      [backendField]: value,
+    },
+  };
 };
 
 const loadAdmins = () => {
@@ -379,6 +422,30 @@ const readSystemSettings = () => {
 
 const saveSystemSettings = (settings) => {
   localStorage.setItem(STORAGE_SYSTEM_SETTINGS, JSON.stringify(settings));
+};
+
+const mergeSettingObjects = (base = {}, patch = {}) => {
+  if (Array.isArray(patch)) return patch;
+
+  return Object.keys({ ...(base || {}), ...(patch || {}) }).reduce((acc, key) => {
+    const baseValue = base?.[key];
+    const patchValue = patch?.[key];
+
+    if (
+      baseValue &&
+      patchValue &&
+      typeof baseValue === "object" &&
+      !Array.isArray(baseValue) &&
+      typeof patchValue === "object" &&
+      !Array.isArray(patchValue)
+    ) {
+      acc[key] = mergeSettingObjects(baseValue, patchValue);
+    } else {
+      acc[key] = patchValue ?? baseValue;
+    }
+
+    return acc;
+  }, {});
 };
 
 const readRealUsers = () => {
@@ -759,6 +826,8 @@ const AdminSidebar = ({
 );
 
 const AdminPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [adminProfiles, setAdminProfiles] = useState(() => loadAdmins());
   // FIX 3: selectedProfile should be a single profile object, not the entire array
   const [selectedProfile, setSelectedProfile] = useState(() => loadAdmins()[0]);
@@ -781,6 +850,7 @@ const AdminPage = () => {
   const [auditLogs, setAuditLogs] = useState(() => loadAuditLogs());
   const [systemSettings, setSystemSettings] = useState(readSystemSettings);
   const [selectedSettingId, setSelectedSettingId] = useState("general");
+  const [savingSettingSection, setSavingSettingSection] = useState(false);
   const [showAdminProfilePassword, setShowAdminProfilePassword] = useState(false);
   // FIX 4: adminNameDraft should use selectedProfile, not loadAdmins() which returns array
   const [adminNameDraft, setAdminNameDraft] = useState(() => loadAdmins()[0]?.name || "");
@@ -801,9 +871,102 @@ const AdminPage = () => {
     photo: "",
   });
 
+  const currentRoutePage = useMemo(() => {
+    const routeSegment = location.pathname.replace(/^\/admin\/?/, "").split("/")[0] || "dashboard";
+    return ["dashboard", "users", "claims", "requirements", "support", "policies", "documents", "notifications", "reports", "profile", "auditlog", "settings", "setting-detail"].includes(routeSegment)
+      ? routeSegment
+      : "dashboard";
+  }, [location.pathname]);
+
+  useEffect(() => {
+    setActivePage(currentRoutePage);
+  }, [currentRoutePage]);
+
   const activeUsers = customerRows.filter((user) => user.status === "Active" || user.status === "Logged In").length;
 
-  const addAuditLogEntry = (actionString) => {
+  useEffect(() => {
+    const hydrateAdminData = async () => {
+      try {
+        const settingsResponse = await apiRequest("/api/admin/settings");
+        if (settingsResponse?.data) {
+          setSystemSettings(settingsResponse.data);
+        }
+      } catch (error) {
+        console.warn("Admin settings sync unavailable, using local settings data.", error);
+      }
+
+      if (!getToken()) return;
+
+      try {
+        const [dashboardResponse, usersResponse, claimsResponse, policiesResponse, auditResponse] = await Promise.all([
+          apiRequest("/api/admin/dashboard"),
+          apiRequest("/api/admin/users"),
+          apiRequest("/api/admin/claims"),
+          apiRequest("/api/admin/policies"),
+          apiRequest("/api/admin/audit-logs"),
+        ]);
+
+        const backendUsers = Array.isArray(usersResponse?.data) ? usersResponse.data : [];
+        const backendClaims = Array.isArray(claimsResponse?.data) ? claimsResponse.data : [];
+        const backendPolicies = Array.isArray(policiesResponse?.data) ? policiesResponse.data : [];
+
+        setCustomerRows(
+          backendUsers.map((user) => ({
+            id: user._id || user.id,
+            name: user.full_name || user.fullName || user.name || "Customer",
+            email: user.email || "",
+            phone: user.phone || "",
+            address: user.address || "Not added",
+            policies: user.policyCount ?? 0,
+            status: user.kyc_status === "verified" ? "Active" : user.status || "Active",
+            city: user.city || user.address || "Not added",
+            profilePhoto: user.profile_image || user.profilePhoto || "",
+          })),
+        );
+
+        setClaimRows(
+          backendClaims.map((claim) => ({
+            id: claim.claim_number || claim._id,
+            user: claim.user?.full_name || claim.user?.name || "Unknown",
+            policy: claim.policy?.policy_name || claim.policy?.type || claim.claim_type || "Insurance",
+            amount: claim.amount ? `INR ${Number(claim.amount).toLocaleString("en-IN")}` : "INR 0",
+            status: claim.status || "Pending",
+            officer: claim.assignedAdmin?.full_name || selectedProfile.name,
+          })),
+        );
+
+        setPlanRows(
+          backendPolicies.map((policy) => ({
+            name: policy.policy_name || policy.name || "Policy",
+            type: policy.policy_type || "Insurance",
+            coverage: policy.coverage_amount ? `INR ${Number(policy.coverage_amount).toLocaleString("en-IN")}` : "INR 0",
+            premium: policy.premium_amount ? `INR ${Number(policy.premium_amount).toLocaleString("en-IN")}/mo` : "INR 0/mo",
+            duration: policy.end_date ? `${new Date(policy.start_date).toLocaleDateString()} - ${new Date(policy.end_date).toLocaleDateString()}` : "1 year",
+            state: policy.status || "Active",
+          })),
+        );
+
+        if (Array.isArray(auditResponse?.data)) {
+          setAuditLogs(auditResponse.data);
+        }
+
+        if (dashboardResponse?.data?.widgets) {
+          const widgets = dashboardResponse.data.widgets;
+          setDetail({
+            title: "Backend dashboard synced",
+            body: `Users: ${widgets.totalUsers || 0}, Policies: ${widgets.activePolicies || 0}, Claims pending: ${widgets.pendingClaims || 0}, Revenue: INR ${Number(widgets.totalRevenue || 0).toLocaleString("en-IN")}`,
+            photo: "",
+          });
+        }
+      } catch (error) {
+        console.warn("Admin backend sync unavailable, using local demo data.", error);
+      }
+    };
+
+    hydrateAdminData();
+  }, [selectedProfile.name]);
+
+  const addAuditLogEntry = async (actionString, moduleName = "admin") => {
     const nextLog = {
       id: `LOG-${Date.now().toString().slice(-4)}`,
       action: actionString,
@@ -811,11 +974,27 @@ const AdminPage = () => {
       initials: selectedProfile?.initials || "SYS",
       createdAt: new Date().toISOString(),
     };
+
     setAuditLogs((currentLogs) => {
       const updated = [nextLog, ...currentLogs];
       saveAuditLogs(updated);
       return updated;
     });
+
+    try {
+      if (getToken()) {
+        await apiRequest("/api/admin/audit-logs", {
+          method: "POST",
+          body: JSON.stringify({
+            action: actionString,
+            module: moduleName,
+            description: actionString,
+          }),
+        });
+      }
+    } catch (error) {
+      console.warn("Audit log DB write failed, saved locally instead.", error);
+    }
   };
 
   const dashboardMetrics = useMemo(
@@ -838,8 +1017,10 @@ const AdminPage = () => {
   );
 
   const openPage = (page) => {
+    const nextPath = page === "dashboard" ? "/admin" : `/admin/${page}`;
     setActivePage(page);
     setMobileOpen(false);
+    navigate(nextPath);
     setDetail({ title: pageTitles[page], body: `You opened ${pageTitles[page]} as ${selectedProfile.role}.`, photo: "" });
   };
 
@@ -1160,28 +1341,68 @@ const AdminPage = () => {
     });
   };
 
-  const getSettingValue = (settingId, field) => {
-    const saved = systemSettings.modules?.[settingId]?.[field.name];
-    return saved ?? field.defaultValue ?? "";
-  };
+  const getSettingValue = (settingId, field) => getSettingValueFromStorage(systemSettings, settingId, field);
 
-  const updateSettingModule = (settingId, field, value) => {
+  const updateSettingModule = async (settingId, field, value) => {
     setSystemSettings((settings) => {
-      const next = {
-        ...settings,
-        modules: {
-          ...(settings.modules || {}),
-          [settingId]: {
-            ...(settings.modules?.[settingId] || {}),
-            [field.name]: value,
-          },
-        },
-      };
+      const patch = buildSettingPatch(settings, settingId, field, value);
+      const next = mergeSettingObjects(settings, patch);
       saveSystemSettings(next);
       return next;
     });
+
+    try {
+      const patch = buildSettingPatch(systemSettings, settingId, field, value);
+      const response = await apiRequest("/api/admin/settings", {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      });
+
+      if (response?.data) {
+        const next = mergeSettingObjects(systemSettings, response.data);
+        setSystemSettings(next);
+        saveSystemSettings(next);
+        window.dispatchEvent(new CustomEvent("agile-settings-updated", { detail: next }));
+      }
+    } catch (error) {
+      console.warn("Settings update could not reach backend, saved locally instead.", error);
+    }
+
     addAuditLogEntry(`/api/v4/settings/update -> ${settingId}.${field.name}`);
     runAction("Setting applied", `${field.label} updated in real time.`);
+  };
+
+  const saveCurrentSettingSection = async () => {
+    if (!selectedSettingId) return;
+
+    const fields = settingFieldGroups[selectedSettingId] || [];
+    const sectionPatch = fields.reduce((patch, field) => {
+      const currentValue = getSettingValueFromStorage(systemSettings, selectedSettingId, field);
+      return mergeSettingObjects(patch, buildSettingPatch(systemSettings, selectedSettingId, field, currentValue));
+    }, {});
+
+    if (!Object.keys(sectionPatch).length) return;
+
+    setSavingSettingSection(true);
+
+    try {
+      const response = await apiRequest("/api/admin/settings", {
+        method: "PATCH",
+        body: JSON.stringify(sectionPatch),
+      });
+
+      const nextSettings = response?.data ? mergeSettingObjects(systemSettings, response.data) : mergeSettingObjects(systemSettings, sectionPatch);
+      setSystemSettings(nextSettings);
+      saveSystemSettings(nextSettings);
+      window.dispatchEvent(new CustomEvent("agile-settings-updated", { detail: nextSettings }));
+      addAuditLogEntry(`/api/v4/settings/save -> ${selectedSettingId}`);
+      runAction("Settings saved", `${selectedSettingId} changes were saved to the backend and live portal.`);
+    } catch (error) {
+      console.warn("Section settings could not be saved to the backend.", error);
+      runAction("Save failed", "The section could not be saved to the backend. Please try again.");
+    } finally {
+      setSavingSettingSection(false);
+    }
   };
 
   const updateSettingFile = (settingId, field, file) => {
@@ -2089,6 +2310,19 @@ const AdminPage = () => {
           <div className="mt-4 rounded-lg bg-blue-50 px-4 py-3 text-sm font-bold leading-6 text-blue-800">
             {card.description} Changes save instantly and are stored for this admin portal.
           </div>
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div>
+              <div className="text-sm font-black text-slate-900">Save this feature section</div>
+              <div className="text-xs font-semibold text-slate-500">Store the latest values in MongoDB and push them to the live portal.</div>
+            </div>
+            <button
+              onClick={saveCurrentSettingSection}
+              disabled={savingSettingSection}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {savingSettingSection ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
           <div className="mt-5 grid gap-4 xl:grid-cols-2">
             {fields.map((field) => renderSettingField(card.id, field))}
           </div>
@@ -2139,6 +2373,7 @@ const AdminPage = () => {
         onLogin={() => {
           setIsAuthenticated(true);
           setActivePage("dashboard");
+          navigate("/admin");
           setAdminNameDraft(selectedProfile.name);
           addAuditLogEntry(`Authentication / Login successful as [${selectedProfile.role}]`);
           setDetail({ title: "Login successful", body: `${selectedProfile.name} signed in as ${selectedProfile.role}.`, photo: selectedProfile.profilePhoto || "" });

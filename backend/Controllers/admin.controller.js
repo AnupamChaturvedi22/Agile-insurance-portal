@@ -3,6 +3,8 @@ const Policy = require("../Models/policy.model");
 const Claim = require("../Models/claim.model");
 const Payment = require("../Models/payment.model");
 const KycRequest = require("../Models/kycRequest.model");
+const SystemSetting = require("../Models/systemSetting.model");
+const AuditLog = require("../Models/auditlog.model");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 
@@ -66,6 +68,60 @@ const getKycRequests = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, data: requests });
 });
 
+const getSystemSettings = catchAsync(async (req, res) => {
+  let settings = await SystemSetting.findOne().sort({ createdAt: -1 });
+
+  if (!settings) {
+    settings = await SystemSetting.create({});
+  }
+
+  res.status(200).json({ success: true, data: settings });
+});
+
+const updateSystemSettings = catchAsync(async (req, res) => {
+  const settings = await SystemSetting.findOneAndUpdate(
+    {},
+    { $set: req.body },
+    {
+      new: true,
+      upsert: true,
+      runValidators: true,
+      setDefaultsOnInsert: true,
+    },
+  );
+
+  res.status(200).json({ success: true, message: "Admin settings updated", data: settings });
+});
+
+const createAuditLog = catchAsync(async (req, res, next) => {
+  const { action, module = "admin", description = "" } = req.body;
+
+  if (!action || !String(action).trim()) {
+    return next(new AppError("Action is required", 400));
+  }
+
+  const log = await AuditLog.create({
+    admin: req.user._id,
+    action: String(action).trim(),
+    module: String(module || "admin").trim(),
+    description: String(description || action).trim(),
+    ipAddress: req.ip || "",
+  });
+
+  const populatedLog = await AuditLog.findById(log._id).populate("admin", "fullName email role");
+
+  res.status(201).json({ success: true, message: "Audit log saved", data: populatedLog });
+});
+
+const getAuditLogs = catchAsync(async (req, res) => {
+  const logs = await AuditLog.find()
+    .populate("admin", "fullName email role")
+    .sort({ createdAt: -1 })
+    .limit(100);
+
+  res.status(200).json({ success: true, data: logs });
+});
+
 const reviewKyc = catchAsync(async (req, res, next) => {
   const { status, review_note } = req.body;
   if (!["verified", "rejected", "pending"].includes(status)) {
@@ -102,5 +158,9 @@ module.exports = {
   getClaims,
   getPayments,
   getKycRequests,
+  getSystemSettings,
+  updateSystemSettings,
+  createAuditLog,
+  getAuditLogs,
   reviewKyc,
 };

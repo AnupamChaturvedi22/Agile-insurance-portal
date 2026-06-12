@@ -7,7 +7,7 @@ import CategoryPage from "./pages/CategoryPage";
 import PolicyDetailsPage from "./pages/PolicyDetailsPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import PaymentSuccessPage from "./pages/PaymentSuccessPage";
-import AdminPage from "./pages/AdminPage";
+import AdminPage from "./pages/admin/AdminPage";
 import CalculatorPage from "./pages/CalculatorPage";
 import InfoPage from "./pages/InfoPage";
 import WhyChoosePage from "./pages/WhyChoosePage";
@@ -77,7 +77,7 @@ const App = () => {
       </Route>
 
       {/* Admin routes - specialized admin interface with role-based access */}
-      <Route path="/admin" element={<AdminPage />} />
+      <Route path="/admin/*" element={<AdminPage />} />
 
       {/* Protected dashboard routes - requires authentication */}
       <Route

@@ -1,8 +1,30 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Clock3, Mail, MapPin, MessageCircle, PhoneCall, Send, ShieldCheck } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { useAuth } from "../../contexts/useAuth";
-import { apiRequest } from "../../utils/api";
+
+// Support chat storage key in localStorage for persistence
+const SUPPORT_CHAT_KEY = "agile_insurance_support_chats_v1";
+
+// Utility to safely parse JSON from localStorage
+const safeJsonParse = (value, fallback) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+// Load all support chats from localStorage
+const readChats = () => {
+  const chats = safeJsonParse(localStorage.getItem(SUPPORT_CHAT_KEY), []);
+  return Array.isArray(chats) ? chats : [];
+};
+
+// Save all support chats to localStorage
+const saveChats = (chats) => {
+  localStorage.setItem(SUPPORT_CHAT_KEY, JSON.stringify(chats));
+};
 
 // Contact information displayed on the contact page
 // Edit these details to update phone, email, and support information across the app
@@ -33,74 +55,63 @@ const contactDetails = [
 // Main contact dashboard component - displays contact info and support chat interface
 const DashboardContact = () => {
   const { user } = useAuth();
-  const [tickets, setTickets] = useState([]);
+  // Load chats from localStorage on component mount
+  const [chats, setChats] = useState(() => readChats());
   const [subject, setSubject] = useState("Policy support");
   const [message, setMessage] = useState("");
-  const [statusMessage, setStatusMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [loadingTickets, setLoadingTickets] = useState(true);
 
-  useEffect(() => {
-    let mounted = true;
+  // Filter chats for current user thread
+  const userThread = useMemo(
+    () => chats.filter((chat) => chat.userEmail === user?.email),
+    [chats, user?.email],
+  );
 
-    const loadTickets = async () => {
-      setLoadingTickets(true);
-      setStatusMessage("");
-
-      try {
-        const response = await apiRequest("/api/support/tickets");
-        if (mounted) {
-          setTickets(Array.isArray(response?.data) ? response.data : []);
-        }
-      } catch (error) {
-        if (mounted) {
-          setTickets([]);
-          setStatusMessage(error.message || "Unable to load your support history right now.");
-        }
-      } finally {
-        if (mounted) {
-          setLoadingTickets(false);
-        }
-      }
-    };
-
-    if (user?.email) {
-      loadTickets();
-    } else {
-      setTickets([]);
-      setLoadingTickets(false);
-    }
-
-    return () => {
-      mounted = false;
-    };
-  }, [user?.email]);
-
-  const sendMessage = async () => {
+  // Send message handler - creates new chat or adds to existing thread
+  const sendMessage = () => {
     const text = message.trim();
+
     if (!text) return;
 
-    setIsSending(true);
-    setStatusMessage("");
+    // Create new message object with metadata
+    const nextMessage = {
+      id: `msg_${Date.now()}`,
+      from: "user",
+      sender: user?.fullName || "Customer",
+      text,
+      createdAt: new Date().toISOString(),
+    };
 
-    try {
-      const response = await apiRequest("/api/support/tickets", {
-        method: "POST",
-        body: JSON.stringify({ subject, message: text, priority: "Medium" }),
-      });
+    // Check if open chat exists for this user
+    const existing = chats.find((chat) => chat.userEmail === user?.email && chat.status !== "Resolved");
 
-      if (response?.data) {
-        setTickets((prev) => [response.data, ...prev]);
-      }
-
-      setMessage("");
-      setStatusMessage("Support request sent successfully.");
-    } catch (error) {
-      setStatusMessage(error.message || "Unable to send your support request right now.");
-    } finally {
-      setIsSending(false);
-    }
+    // Update existing chat or create new one
+    const nextChats = existing
+      ? chats.map((chat) =>
+          chat.id === existing.id
+            ? { ...chat, subject, status: "Open", messages: [...chat.messages, nextMessage], updatedAt: new Date().toISOString() }
+            : chat,
+        )
+      : [
+          {
+            id: `chat_${Date.now()}`,
+            userId: user?.id,
+            userName: user?.fullName || "Customer",
+            userEmail: user?.email || "guest@agile.insurance",
+            subject,
+            priority: "Medium",
+            status: "Open",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            messages: [nextMessage],
+          },
+          ...chats,
+        ];
+    setChats(nextChats);
+    saveChats(nextChats);
+    setMessage("");
   };
+
+
 
   return (
     <div className="space-y-8">
@@ -120,14 +131,17 @@ const DashboardContact = () => {
           </div>
 
           <a
-            href="https://wa.me/917972657424?text=Hi%20Support%2C%20I%20need%20help%20with%20my%20insurance%20account."
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 text-sm font-black text-white shadow-sm hover:opacity-95"
-          >
-            <FaWhatsapp size={18} />
-            Start chat on WhatsApp
-          </a>
+  href={`https://wa.me/${supportPhone.replace(
+    /\D/g,
+    ""
+  )}?text=Hi%20Support%2C%20I%20need%20help%20with%20my%20insurance%20account.`}
+  target="_blank"
+  rel="noreferrer"
+  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 text-sm font-black text-white shadow-sm hover:opacity-95"
+>
+  <FaWhatsapp size={18} />
+  Start chat on WhatsApp
+</a>
         </div>
       </section>
 
