@@ -1,6 +1,13 @@
 const TOKEN_KEY = "agile_insurance_api_token_v1";
 const ADMIN_TOKEN_KEY = "agile_insurance_admin_token_v1";
+const ADMIN_PROFILE_KEY = "agile_insurance_admin_profile_v1";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000").replace(/\/$/, "");
+
+const initialsFromName = (name = "") => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+  return (parts[0]?.slice(0, 2) || "AD").toUpperCase();
+};
 
 // Frontend-only session token helpers. No backend API server is required.
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
@@ -17,6 +24,39 @@ export const getAdminToken = () => localStorage.getItem(ADMIN_TOKEN_KEY);
 export const setAdminToken = (token) => {
   if (token) localStorage.setItem(ADMIN_TOKEN_KEY, token);
   else localStorage.removeItem(ADMIN_TOKEN_KEY);
+};
+
+export const normalizeAdminProfile = (admin = {}) => ({
+  adminId: admin.adminId || admin.id || admin._id || "",
+  name: admin.fullName || admin.name || admin.full_name || "Admin",
+  email: admin.email || "",
+  role: admin.role || "Admin",
+  profilePhoto: admin.profilePhoto || admin.profile_photo || "",
+  initials: initialsFromName(admin.fullName || admin.name || admin.full_name || admin.email || "Admin"),
+  access: admin.role || "Admin",
+  password: "",
+});
+
+export const saveAdminSession = (token, admin) => {
+  setAdminToken(token);
+
+  const profile = normalizeAdminProfile(admin || {});
+  localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(profile));
+  return profile;
+};
+
+export const getAdminProfile = () => {
+  try {
+    const saved = localStorage.getItem(ADMIN_PROFILE_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const clearAdminSession = () => {
+  setAdminToken(null);
+  localStorage.removeItem(ADMIN_PROFILE_KEY);
 };
 
 export const apiRequest = async (path, options = {}) => {

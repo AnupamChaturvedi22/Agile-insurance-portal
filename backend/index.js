@@ -35,17 +35,17 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Request Logger Middleware
-app.use((req, res, next) => {
-  console.log("\n========== REQUEST ==========");
-  console.log("Method:", req.method);
-  console.log("URL:", req.originalUrl);
-  console.log("Body:", req.body);
-  console.log("Params:", req.params);
-  console.log("Query:", req.query);
-  console.log("=============================\n");
+// app.use((req, res, next) => {
+//   console.log("\n========== REQUEST ==========");
+//   console.log("Method:", req.method);
+//   console.log("URL:", req.originalUrl);
+//   console.log("Body:", req.body);
+//   console.log("Params:", req.params);
+//   console.log("Query:", req.query);
+//   console.log("=============================\n");
 
-  next();
-});
+//   next();
+// });
 
 // Health Check Route
 app.get("/health", (req, res) => {

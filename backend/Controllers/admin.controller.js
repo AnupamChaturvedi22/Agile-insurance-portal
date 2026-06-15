@@ -21,6 +21,9 @@ const flattenObject = (obj, prefix = "") => {
 };
 
 const getDashboard = catchAsync(async (req, res) => {
+
+
+
   const [totalUsers, totalAgents, activePolicies, pendingClaims, revenueAgg, pendingKyc] = await Promise.all([
     User.countDocuments({ role: "user" }),
     User.countDocuments({ role: "agent" }),
@@ -29,10 +32,8 @@ const getDashboard = catchAsync(async (req, res) => {
     Payment.aggregate([{ $match: { status: "success" } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
     KycRequest.countDocuments({ status: "pending" }),
   ]);
-
-  const recentUsers = await User.find().select("full_name email role created_at kyc_status").sort({ created_at: -1 }).limit(8);
-  const recentClaims = await Claim.find().populate("user", "full_name email").sort({ createdAt: -1 }).limit(8);
-
+  const recentUsers = await User.find().select("fullName email role created_at kyc_status").sort({ created_at: -1 }).limit(8);
+  const recentClaims = await Claim.find().populate("user", "fullName email").sort({ createdAt: -1 }).limit(8);
   res.status(200).json({
     success: true,
     data: {
@@ -50,15 +51,16 @@ const getDashboard = catchAsync(async (req, res) => {
   });
 });
 
+
 const getUsers = catchAsync(async (req, res) => {
   try{
     const users = await User.find()
     .select(
-      "_id full_name email phone address is_verified created_at"
+      "_id fullName email phone address is_verified created_at"
     );
     const formattedUsers = users.map((user) => ({
       id: user._id,
-      name: user.full_name,
+      name: user.fullName,
       email:user.email,
       phone: user.phone,
       address: user.address,
@@ -79,6 +81,8 @@ const getUsers = catchAsync(async (req, res) => {
   }
 });
 
+
+
 const createUser = catchAsync(async (req, res, next) => {
   const { name, email, phone, address, status } = req.body;
   if (!email) {
@@ -89,7 +93,7 @@ const createUser = catchAsync(async (req, res, next) => {
     return next(new AppError("Email or phone already exists", 409));
   }
   const user = await User.create({
-    full_name: name || "New Customer",
+    fullName: name || "New Customer",
     email,
     phone: phone || `+91 ${Math.floor(1000000000 + Math.random() * 9000000000)}`,
     address: address || "",
@@ -100,6 +104,8 @@ const createUser = catchAsync(async (req, res, next) => {
   });
   res.status(201).json({ success: true, data: user });
 });
+
+
 
 const updateUser = catchAsync(async (req, res, next) => {
   const { name, email, phone, address, status } = req.body;
@@ -120,13 +126,15 @@ const updateUser = catchAsync(async (req, res, next) => {
     user.phone = phone;
   }
 
-  if (name) user.full_name = name;
+  if (name) user.fullName = name;
   if (address !== undefined) user.address = address;
   if (status !== undefined) user.is_verified = (status === "Active");
 
   await user.save();
   res.status(200).json({ success: true, data: user });
 });
+
+
 
 const deleteUser = catchAsync(async (req, res, next) => {
   const user = await User.findByIdAndDelete(req.params.id);
@@ -144,22 +152,22 @@ const getAgents = catchAsync(async (req, res) => {
 });
 
 const getPolicies = catchAsync(async (req, res) => {
-  const policies = await Policy.find().populate("user", "full_name email phone role").sort({ createdAt: -1 });
+  const policies = await Policy.find().populate("user", "fullName email phone role").sort({ createdAt: -1 });
   res.status(200).json({ success: true, data: policies });
 });
 
 const getClaims = catchAsync(async (req, res) => {
-  const claims = await Claim.find().populate("user", "full_name email phone role").populate("policy").sort({ createdAt: -1 });
+  const claims = await Claim.find().populate("user", "fullName email phone role").populate("policy").sort({ createdAt: -1 });
   res.status(200).json({ success: true, data: claims });
 });
 
 const getPayments = catchAsync(async (req, res) => {
-  const payments = await Payment.find().populate("user", "full_name email phone role").populate("policy").sort({ createdAt: -1 });
+  const payments = await Payment.find().populate("user", "fullName email phone role").populate("policy").sort({ createdAt: -1 });
   res.status(200).json({ success: true, data: payments });
 });
 
 const getKycRequests = catchAsync(async (req, res) => {
-  const requests = await KycRequest.find().populate("user", "full_name email phone role kyc_status").sort({ createdAt: -1 });
+  const requests = await KycRequest.find().populate("user", "fullName email phone role kyc_status").sort({ createdAt: -1 });
   res.status(200).json({ success: true, data: requests });
 });
 
@@ -257,7 +265,7 @@ const updateClaim = catchAsync(async (req, res, next) => {
     req.params.id,
     { status, notes, assignedAdmin },
     { new: true, runValidators: true }
-  ).populate("user", "full_name email").populate("policy", "policy_name");
+  ).populate("user", "fullName email").populate("policy", "policy_name");
 
   if (!claim) {
     return next(new AppError("Claim not found", 404));
@@ -287,24 +295,35 @@ const getSupportTicketsAdmin = catchAsync(async (req, res) => {
   const SupportTicket = require("../Models/contact.model");
 
   const tickets = await SupportTicket.find()
-    .populate("user", "full_name email phone")
-    .populate("assignedAdmin", "full_name email")
+    .populate("user", "fullName email phone")
+    .populate("assignedAdmin", "fullName email")
     .sort({ createdAt: -1 });
 
-  const formattedTickets = tickets.map(ticket => ({
-    id: ticket._id,
-    userId: ticket.user._id,
-    userName: ticket.user.full_name,
-    userEmail: ticket.user.email,
-    userPhone: ticket.user.phone,
-    subject: ticket.subject,
-    status: ticket.status,
-    priority: ticket.priority,
-    assignedAdmin: ticket.assignedAdmin,
-    messages: ticket.messages,
-    createdAt: ticket.createdAt,
-    updatedAt: ticket.updatedAt,
-  }));
+  const formattedTickets = tickets.map((ticket) => {
+    const user = ticket.user || {};
+    const assignedAdmin = ticket.assignedAdmin || null;
+
+    return {
+      id: ticket._id,
+      userId: user._id || null,
+      userName: user.full_name || "Unknown user",
+      userEmail: user.email || "",
+      userPhone: user.phone || "",
+      subject: ticket.subject || "Support ticket",
+      status: ticket.status || "Open",
+      priority: ticket.priority || "Medium",
+      assignedAdmin: assignedAdmin
+        ? {
+            _id: assignedAdmin._id || null,
+            full_name: assignedAdmin.full_name || assignedAdmin.name || "Unassigned",
+            email: assignedAdmin.email || "",
+          }
+        : null,
+      messages: Array.isArray(ticket.messages) ? ticket.messages : [],
+      createdAt: ticket.createdAt,
+      updatedAt: ticket.updatedAt,
+    };
+  });
 
   res.status(200).json({
     success: true,

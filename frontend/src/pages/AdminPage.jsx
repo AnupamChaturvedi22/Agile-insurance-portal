@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   apiRequest,
+  clearAdminSession,
+  getAdminProfile,
   getAdminToken,
-  setAdminToken
+  saveAdminSession,
 } from "../utils/api";
 
 
@@ -59,6 +61,7 @@ const STORAGE_DOCUMENTS = "agile_insurance_documents_v1";
 const defaultAdminProfiles = [
   {
     adminId: "ADM-SUPER-001",
+    email: "asha.admin@agileinsure.in",
     password: "Super@123",
     profilePhoto: "",
     name: "Asha Menon",
@@ -68,6 +71,7 @@ const defaultAdminProfiles = [
   },
   {
     adminId: "ADM-MGR-002",
+    email: "rohit.manager@agileinsure.in",
     password: "Manager@123",
     profilePhoto: "",
     name: "Rohit Kapoor",
@@ -77,6 +81,7 @@ const defaultAdminProfiles = [
   },
   {
     adminId: "ADM-CLM-003",
+    email: "naina.claims@agileinsure.in",
     password: "Claims@123",
     profilePhoto: "",
     name: "Naina Shah",
@@ -86,6 +91,7 @@ const defaultAdminProfiles = [
   },
   {
     adminId: "ADM-SUP-004",
+    email: "imran.support@agileinsure.in",
     password: "Support@123",
     profilePhoto: "",
     name: "Imran Ali",
@@ -326,8 +332,6 @@ const settingFieldGroups = {
  
  
 };
-
-
 
 const policyPlans = [
   { name: "Health Secure Plus", type: "Health", coverage: "INR 25L", premium: "INR 1,850/mo", duration: "1 year", state: "Active" },
@@ -620,16 +624,27 @@ const ActionButton = ({ icon: Icon, label, onClick }) => (
   </button>
 );
 
-const AdminLogin = ({ adminProfiles, selectedProfile, setSelectedProfile, onLogin }) => {
+
+
+
+
+
+
+
+
+
+const AdminLogin = ({ adminProfiles, selectedProfile, setSelectedProfile, onLogin, onRegister }) => {
   const [otpOpen, setOtpOpen] = useState(false);
-  const [adminId, setAdminId] = useState(selectedProfile.adminId);
+  const [adminId, setAdminId] = useState(selectedProfile?.adminId || "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [mode, setMode] = useState("login");
+  const [registerForm, setRegisterForm] = useState({ fullName: "", email: "", phone: "", password: "", role: "Support Executive" });
 
   const chooseProfile = (profile) => {
     setSelectedProfile(profile);
-    setAdminId(profile.adminId);
+    setAdminId(profile.adminId || profile.email || "");
     setPassword("");
     setError("");
   };
@@ -678,6 +693,60 @@ const AdminLogin = ({ adminProfiles, selectedProfile, setSelectedProfile, onLogi
             </div>
           </div>
 
+          {mode === "register" ? (
+            <form
+              className="mt-8 space-y-4"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                try {
+                  setError("");
+                  const response = await apiRequest("/api/admin/auth/register", {
+                    method: "POST",
+                    body: JSON.stringify(registerForm),
+                  });
+
+                  if (response?.success) {
+                    setMode("login");
+                    setError("Admin account created. You can sign in with the new credentials.");
+                    if (typeof onRegister === "function") onRegister(response);
+                  } else {
+                    setError(response?.message || "Registration failed.");
+                  }
+                } catch (err) {
+                  setError(err?.message || "Admin registration failed.");
+                }
+              }}
+            >
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-wide text-slate-500">Full Name</span>
+                <input className="mt-2 h-12 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-bold outline-none focus:border-blue-500" value={registerForm.fullName} onChange={(event) => setRegisterForm((prev) => ({ ...prev, fullName: event.target.value }))} required />
+              </label>
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-wide text-slate-500">Email</span>
+                <input type="email" className="mt-2 h-12 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-bold outline-none focus:border-blue-500" value={registerForm.email} onChange={(event) => setRegisterForm((prev) => ({ ...prev, email: event.target.value }))} required />
+              </label>
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-wide text-slate-500">Phone</span>
+                <input className="mt-2 h-12 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-bold outline-none focus:border-blue-500" value={registerForm.phone} onChange={(event) => setRegisterForm((prev) => ({ ...prev, phone: event.target.value }))} required />
+              </label>
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-wide text-slate-500">Password</span>
+                <input type="password" className="mt-2 h-12 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-bold outline-none focus:border-blue-500" value={registerForm.password} onChange={(event) => setRegisterForm((prev) => ({ ...prev, password: event.target.value }))} required />
+              </label>
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-wide text-slate-500">Role</span>
+                <select className="mt-2 h-12 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-bold outline-none focus:border-blue-500" value={registerForm.role} onChange={(event) => setRegisterForm((prev) => ({ ...prev, role: event.target.value }))}>
+                  <option>Support Executive</option>
+                  <option>Insurance Manager</option>
+                  <option>Claims Officer</option>
+                  <option>Super Admin</option>
+                </select>
+              </label>
+              {error && <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">{error}</div>}
+              <button className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-black text-white hover:bg-blue-700">Create Admin Account</button>
+              <button type="button" onClick={() => { setMode("login"); setError(""); }} className="text-sm font-black text-blue-700 hover:text-blue-900">Back to login</button>
+            </form>
+          ) : (
           <form
             className="mt-8 space-y-4"
             onSubmit={async (event) => {
@@ -687,19 +756,19 @@ const AdminLogin = ({ adminProfiles, selectedProfile, setSelectedProfile, onLogi
                 const response = await apiRequest("/api/admin/auth/login", {
                   method: "POST",
                   body: JSON.stringify({
-                    email: selectedProfile.email,
-                    password: password,
+                    email: (selectedProfile?.email || adminId).trim(),
+                    password,
                   }),
                 });
 
                 if (response?.success && response?.data?.token) {
-                setAdminToken(response.data.token);
-                  onLogin();
+                  const adminProfile = saveAdminSession(response.data.token, response.data.admin);
+                  onLogin(adminProfile, response.data.token);
                 } else {
                   setError(response?.message || "Invalid credentials.");
                 }
               } catch (err) {
-                setError(err.message || "Login failed. Please check your credentials or database connection.");
+                setError(err?.message || "Login failed. Please check your credentials or database connection.");
               }
             }}
           >
@@ -750,9 +819,12 @@ const AdminLogin = ({ adminProfiles, selectedProfile, setSelectedProfile, onLogi
 
             <button className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-black text-white hover:bg-blue-700">
               <Lock size={18} />
-              Login as {selectedProfile.role}
+              Login as {selectedProfile?.role || "Admin"}
             </button>
+
+            <button type="button" onClick={() => setMode("register")} className="text-sm font-black text-blue-700 hover:text-blue-900">Need a new admin account? Register here</button>
           </form>
+          )}
         </section>
       </div>
     </div>
@@ -871,12 +943,15 @@ const AdminSidebar = ({
   </aside>
 );
 
+
 const AdminPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [adminProfiles, setAdminProfiles] = useState(() => loadAdmins());
-  // FIX 3: selectedProfile should be a single profile object, not the entire array
-  const [selectedProfile, setSelectedProfile] = useState(() => loadAdmins()[0]);
+  const [selectedProfile, setSelectedProfile] = useState(() => {
+    const savedProfile = getAdminProfile();
+    return savedProfile || loadAdmins()[0];
+  });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activePage, setActivePage] = useState("dashboard");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -895,7 +970,7 @@ const AdminPage = () => {
   const [savingSettingSection, setSavingSettingSection] = useState(false);
   const [showAdminProfilePassword, setShowAdminProfilePassword] = useState(false);
   // FIX 4: adminNameDraft should use selectedProfile, not loadAdmins() which returns array
-  const [adminNameDraft, setAdminNameDraft] = useState(() => loadAdmins()[0]?.name || "");
+  const [adminNameDraft, setAdminNameDraft] = useState(() => getAdminProfile()?.name || loadAdmins()[0]?.name || "");
   const [passwordDraft, setPasswordDraft] = useState({ old: "", next: "", confirm: "" });
   const [passwordMessage, setPasswordMessage] = useState("");
   const [supportChats, setSupportChats] = useState(() => readSupportChats());
@@ -913,10 +988,16 @@ const AdminPage = () => {
     photo: "",
   });
   useEffect(() => {
-   if(getAdminToken()){
+    const savedProfile = getAdminProfile();
+    if (savedProfile) {
+      setSelectedProfile((current) => ({ ...current, ...savedProfile }));
+      setAdminNameDraft(savedProfile.name || "");
+    }
+
+    if (getAdminToken()) {
       setIsAuthenticated(true);
-   }
-}, []);
+    }
+  }, []);
   const [customerRows, setCustomerRows] = useState([]);
   
 //   const [users, setUsers] = useState([]);
@@ -1690,6 +1771,7 @@ const activeUsers = customerRows.filter(
 
     try {
       const response = await apiRequest("/api/admin/settings", {
+        useAdminToken: true,
         method: "PATCH",
         body: JSON.stringify(sectionPatch),
       });
@@ -2685,13 +2767,15 @@ const activeUsers = customerRows.filter(
         adminProfiles={adminProfiles}
         selectedProfile={selectedProfile}
         setSelectedProfile={setSelectedProfile}
-        onLogin={() => {
+        onLogin={(profile) => {
+          const currentProfile = profile || getAdminProfile() || selectedProfile;
+          setSelectedProfile(currentProfile);
           setIsAuthenticated(true);
           setActivePage("dashboard");
           navigate("/admin");
-          setAdminNameDraft(selectedProfile.name);
-          addAuditLogEntry(`Authentication / Login successful as [${selectedProfile.role}]`);
-          setDetail({ title: "Login successful", body: `${selectedProfile.name} signed in as ${selectedProfile.role}.`, photo: selectedProfile.profilePhoto || "" });
+          setAdminNameDraft(currentProfile.name || "");
+          addAuditLogEntry(`Authentication / Login successful as [${currentProfile.role}]`);
+          setDetail({ title: "Login successful", body: `${currentProfile.name} signed in as ${currentProfile.role}.`, photo: currentProfile.profilePhoto || "" });
         }}
       />
     );
@@ -2706,7 +2790,13 @@ const activeUsers = customerRows.filter(
           activePage={activePage}
           selectedProfile={selectedProfile}
           openPage={openPage}
-          onLogout={() => setIsAuthenticated(false)}
+          onLogout={() => {
+            clearAdminSession();
+            setIsAuthenticated(false);
+            setSelectedProfile(loadAdmins()[0]);
+            setActivePage("dashboard");
+            navigate("/admin");
+          }}
           onToggleCollapsed={() => setSidebarCollapsed((value) => !value)}
         />
 
@@ -2720,7 +2810,13 @@ const activeUsers = customerRows.filter(
                 activePage={activePage}
                 selectedProfile={selectedProfile}
                 openPage={openPage}
-                onLogout={() => setIsAuthenticated(false)}
+                onLogout={() => {
+                  clearAdminSession();
+                  setIsAuthenticated(false);
+                  setSelectedProfile(loadAdmins()[0]);
+                  setActivePage("dashboard");
+                  navigate("/admin");
+                }}
                 onToggleCollapsed={() => setMobileOpen(false)}
               />
               <button className="absolute right-4 top-4 rounded-lg bg-white p-2 text-slate-700 shadow" aria-label="Close menu" onClick={() => setMobileOpen(false)}>

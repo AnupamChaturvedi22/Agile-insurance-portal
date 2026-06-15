@@ -27,9 +27,11 @@ const authenticateAdmin = catchAsync(async (req, res, next) => {
     return next(new AppError("Unauthorized: No token provided", 401));
   }
 
+  const jwtSecret = process.env.JWT_SECRET || process.env.JWT_TOKEN || appConfig.jwtSecret;
+
   let decoded;
   try {
-    decoded = jwt.verify(token, appConfig.jwtSecret);
+    decoded = jwt.verify(token, jwtSecret);
   } catch (err) {
     if (err.name === "TokenExpiredError") {
       return next(new AppError("Unauthorized: Token has expired", 401));
@@ -37,8 +39,8 @@ const authenticateAdmin = catchAsync(async (req, res, next) => {
     return next(new AppError("Unauthorized: Invalid token", 401));
   }
 
-  // Admin JWT payload uses "id" (set in authAdmin.controller.js)
-  const adminId = decoded.id;
+  // Support both current and older token payload shapes.
+  const adminId = decoded.id || decoded._id || decoded.adminId;
   if (!adminId) {
     return next(new AppError("Unauthorized: Malformed token", 401));
   }

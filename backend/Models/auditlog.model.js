@@ -13,8 +13,8 @@ const auditLogSchema = new mongoose.Schema(
     },
     module: {
       type: String,
-      enum: ["auth", "users", "claims", "policies", "support", "settings", "documents"],
-      default: "users",
+      enum: ["admin", "auth", "users", "claims", "policies", "support", "settings", "documents"],
+      default: "admin",
     },
     description: {
       type: String,
