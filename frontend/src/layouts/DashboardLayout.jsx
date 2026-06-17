@@ -41,25 +41,25 @@ const getNavItems = (settings) => [
 
   { label: "My Policies", icon: BadgeCheck, to: "/dashboard/policies" },
 
-  settings?.modules?.claimsModule && {
+  settings?.configuration?.claimsModule && {
     label: "Claim Management",
     icon: Sparkles,
     to: "/dashboard/claims",
   },
 
-  settings?.modules?.paymentsModule && {
+  settings?.configuration?.paymentsModule && {
     label: "Payment History",
     icon: CreditCard,
     to: "/dashboard/payments",
   },
 
-  settings?.modules?.documentModule && {
+  settings?.configuration?.documentsModule && {
     label: "Documents Center",
     icon: FileText,
     to: "/dashboard/documents",
   },
 
-  settings?.modules?.supportModule && {
+  settings?.configuration?.supportModule && {
     label: "Contact Us",
     icon: PhoneCall,
     to: "/dashboard/contact",

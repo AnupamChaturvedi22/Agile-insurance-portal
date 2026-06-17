@@ -1000,24 +1000,7 @@ const AdminPage = () => {
   }, []);
   const [customerRows, setCustomerRows] = useState([]);
   
-//   const [users, setUsers] = useState([]);
-// useEffect(() => {
-//   const fetchUsers = async () => {
-//     try {
-//       const response = await apiRequest("/api/admin/users");
 
-//       const data = response.data; // if using axios
-
-//       if (data.success) {
-//         setCustomerRows(data.users);
-//       }
-//     } catch (error) {
-//       console.error("Error fetching users:", error);
-//     }
-//   };
-
-//   fetchUsers();
-// }, []);
 
 const activeUsers = customerRows.filter(
   (user) => user.status === "Active"
@@ -2934,5 +2917,11 @@ const activeUsers = customerRows.filter(
     </div>
   );
 };
+
+
+
+
+
+
 
 export default AdminPage;

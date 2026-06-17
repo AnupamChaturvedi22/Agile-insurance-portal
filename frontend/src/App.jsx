@@ -24,8 +24,8 @@ import DashboardNotifications from "./pages/dashboard/DashboardNotifications";
 import DashboardProfile from "./pages/dashboard/DashboardProfile";
 import DashboardSecurity from "./pages/dashboard/DashboardSecurity";
 import NotFoundPage from "./pages/NotFoundPage";
-
-// Main app routing configuration
+import { Provider } from "react-redux";
+import { store } from "./store/adminStore";
 // Routes are organized by layout type: public, auth-only, admin, and protected dashboard
 const App = () => {
   return (
@@ -77,8 +77,15 @@ const App = () => {
       </Route>
 
       {/* Admin routes - specialized admin interface with role-based access */}
-      <Route path="/admin/*" element={<AdminPage />} />
 
+<Route
+  path="/admin/*"
+  element={
+    <Provider store={store}>
+      <AdminPage />
+    </Provider>
+  }
+/>
       {/* Protected dashboard routes - requires authentication */}
       <Route
         path="/dashboard"

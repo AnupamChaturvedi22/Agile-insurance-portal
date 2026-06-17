@@ -5,7 +5,8 @@ import {
   Plus,
   ShieldCheck
 } from "lucide-react";
-
+import { useState, useEffect } from "react";
+import { apiRequest } from "../utils/api";
 import {
   FaFacebook,
   FaYoutube,
@@ -16,53 +17,74 @@ import {
 // Footer component - site-wide footer with navigation, trust indicators, and legal info
 // Contains 4 main navigation sections, payment methods, security badge, and social links
 const Footer = () => {
+  const [pageSettings, setPageSettings] = useState(null);
   // Footer navigation structure
   // EDIT HERE: Add, remove, or modify footer sections and links
   // Format: { title: "Section Name", links: [{ label: "Link Text", to: "/route" }], hasIcon: true/false }
   // hasIcon shows a "+" icon before each link for visual consistency
   const sections = [
-    {
-      title: "Insurance",
-      links: [
-        { label: "General Insurance", to: "/general-insurance" },
-        { label: "Life Insurance", to: "/life-insurance" },
-        { label: "Term Insurance", to: "/term-insurance" },
-        { label: "Investment", to: "/investment" },
-        { label: "Health Insurance", to: "/health-insurance" },
-        { label: "Other Insurance", to: "/other-insurance" },
-      ],
-      hasIcon: true
+  {
+    title: "Insurance",
+    links: [
+      pageSettings?.generalInsurancePage && { label: "General Insurance", to: "/general-insurance" },
+      pageSettings?.lifeInsurancePage && { label: "Life Insurance", to: "/life-insurance" },
+      pageSettings?.termInsurancePage && { label: "Term Insurance", to: "/term-insurance" },
+      pageSettings?.investmentPage && { label: "Investment", to: "/investment" },
+      pageSettings?.healthInsurancePage && { label: "Health Insurance", to: "/health-insurance" },
+      pageSettings?.otherInsurancePage && { label: "Other Insurance", to: "/other-insurance" },
+    ].filter(Boolean),
+    hasIcon: true,
+  },
+
+  {
+  title: "Calculators",
+  links: [
+    pageSettings?.premiumCalculator && {
+      label: "Insurance Premium Calculator",
+      to: "/calculator?type=premium",
     },
-    {
-      title: "Calculators",
-      links: [
-        { label: "Insurance Premium Calculator", to: "/calculator?type=premium" },
-        { label: "Term Insurance Calculator", to: "/calculator?type=term" },
-        { label: "EMI Calculator", to: "/calculator?type=emi" },
-        { label: "Car Insurance Calculator", to: "/calculator?type=car" },
-      ],
-      hasIcon: true
+
+    pageSettings?.termCalculator && {
+      label: "Term Insurance Calculator",
+      to: "/calculator?type=term",
     },
-    {
-      title: "Resources",
-      links: [
-        { label: "Articles", to: "/articles" },
-        { label: "Customer reviews", to: "/reviews" },
-        { label: "Insurance companies", to: "/companies" },
-        { label: "Newsroom", to: "/newsroom" },
-        { label: "Awards", to: "/awards" }
-      ]
+
+    pageSettings?.emiCalculator && {
+      label: "EMI Calculator",
+      to: "/calculator?type=emi",
     },
-    {
-      title: "Agile Claim",
-      links: [
-        { label: "About Us", to: "/about-us" },
-        { label: "Careers", to: "/careers" },
-        { label: "Legal & Admin policies", to: "/legal-policies" },
-        { label: "Contact us", to: "/contact" }
-      ]
-    }
-  ];
+
+    pageSettings?.carCalculator && {
+      label: "Car Insurance Calculator",
+      to: "/calculator?type=car",
+    },
+  ].filter(Boolean),
+
+  hasIcon: true,
+},
+
+  {
+    title: "Resources",
+    links: [
+      pageSettings?.articlesPage && { label: "Articles", to: "/articles" },
+      pageSettings?.reviewsPage && { label: "Customer reviews", to: "/reviews" },
+      pageSettings?.companiesPage && { label: "Insurance companies", to: "/companies" },
+      pageSettings?.newsroomPage && { label: "Newsroom", to: "/newsroom" },
+      pageSettings?.awardsPage && { label: "Awards", to: "/awards" },
+    ].filter(Boolean),
+  },
+
+  {
+    title: "Agile Claim",
+    links: [
+      pageSettings?.aboutPage && { label: "About Us", to: "/about-us" },
+      pageSettings?.careersPage && { label: "Careers", to: "/careers" },
+      pageSettings?.legalPoliciesPage && { label: "Legal & Admin policies", to: "/legal-policies" },
+      pageSettings?.contactPage && { label: "Contact us", to: "/contact" },
+    ].filter(Boolean),
+  },
+];
+
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -77,6 +99,25 @@ const Footer = () => {
     hidden: { opacity: 0, x: -10 },
     visible: { opacity: 1, x: 0 }
   };
+
+useEffect(() => {
+  const loadSettings = async () => {
+    try {
+      const res = await apiRequest("/api/admin/settings");
+      setPageSettings(res.data.pages);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  loadSettings();
+}, []);
+
+
+if (!pageSettings) {
+  return <footer>Loading...</footer>;
+}
+
 
   return (
     <footer className="bg-[#051024] text-gray-400 px-4 py-8 sm:px-6 sm:py-10 lg:px-24 font-sans border-t rounded-t-3xl border-slate-800">

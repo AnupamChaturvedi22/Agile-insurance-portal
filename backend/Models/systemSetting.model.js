@@ -16,14 +16,6 @@ const systemSettingsSchema = new mongoose.Schema(
             secondary: {type: String, default: "#6c757d"},
         },
 
-
-
-
-
-
-
-
-
         //  System Configuration
         modules: {
             claimsModule:{type: Boolean, default: true},
@@ -98,28 +90,108 @@ const systemSettingsSchema = new mongoose.Schema(
       default: "Smart Insurance for Every Need",
     },
     },
-//Manage pages
-    pages:{
-        aboutPage: {
-      type: Boolean,
-      default: true,
-    },
+pages: {
+  aboutPage: {
+    type: Boolean,
+    default: true,
+  },
 
-    contactPage: {
-      type: Boolean,
-      default: true,
-    },
+  contactPage: {
+    type: Boolean,
+    default: true,
+  },
 
-    articlesPage: {
-      type: Boolean,
-      default: true,
-    },
+  articlesPage: {
+    type: Boolean,
+    default: true,
+  },
 
-    pageNotice: {
-      type: String,
-      default: "Static pages are managed by the admin team.",
-    },
-    },
+  generalInsurancePage: {
+    type: Boolean,
+    default: true,
+  },
+
+  lifeInsurancePage: {
+    type: Boolean,
+    default: true,
+  },
+
+  termInsurancePage: {
+    type: Boolean,
+    default: true,
+  },
+
+  investmentPage: {
+    type: Boolean,
+    default: true,
+  },
+
+  healthInsurancePage: {
+    type: Boolean,
+    default: true,
+  },
+
+  otherInsurancePage: {
+    type: Boolean,
+    default: true,
+  },
+
+  reviewsPage: {
+    type: Boolean,
+    default: true,
+  },
+
+  companiesPage: {
+    type: Boolean,
+    default: true,
+  },
+
+  newsroomPage: {
+    type: Boolean,
+    default: true,
+  },
+
+  awardsPage: {
+    type: Boolean,
+    default: true,
+  },
+
+  careersPage: {
+    type: Boolean,
+    default: true,
+  },
+
+  legalPoliciesPage: {
+    type: Boolean,
+    default: true,
+  },
+
+  pageNotice: {
+    type: String,
+    default: "Static pages are managed by the admin team.",
+  },
+  
+  premiumCalculator: {
+    type: Boolean,
+    default: true,
+  },
+
+  termCalculator: {
+    type: Boolean,
+    default: true,
+  },
+
+  emiCalculator: {
+    type: Boolean,
+    default: true,
+  },
+
+  carCalculator: {
+    type: Boolean,
+    default: true,
+  },
+
+},
 
 // KYC Setting
 kyc: {

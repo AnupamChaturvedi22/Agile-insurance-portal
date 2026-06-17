@@ -41,10 +41,10 @@ const Navbar = () => {
             const settings = response?.data;
 
             setPortalName(
-                settings?.companyName || "Agile Insurance"
+                settings?.general?.companyName || "Agile Insurance"
             );
             setSupportPhone(
-                settings?.supportPhone || "+91 98765 43210"
+                settings?.general?.supportPhone || "+91 98765 43210"
             );
 
         }
