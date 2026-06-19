@@ -1,7 +1,9 @@
 // src/components/pages/Dashboard.jsx
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
-import { Users, FileText, AlertTriangle, CheckCircle2, XCircle, MessageSquare, CreditCard, PieChart, LineChart, BarChart3, ShieldCheck } from "lucide-react";
+import { Users, FileText, AlertTriangle, CheckCircle2, XCircle, MessageSquare, CreditCard, PieChart, LineChart, BarChart3, ShieldCheck, } from "lucide-react";
+
+import { LineChart as ReLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,} from "recharts";
 import { SectionTitle, MiniBars, LineSpark } from "../../components/admin/shared";
 import { useAdminActions } from "../../hooks/useAdminActions";
 
@@ -22,6 +24,20 @@ const Dashboard = () => {
   const userRows = useSelector((s) => s.users.rows);
   const planRows = useSelector((s) => s.policies.rows);
   const supportChats = useSelector((s) => s.support.chats);
+  const monthlyPolicySales = [
+    { month: "Jan", sales: 55 },
+    { month: "Feb", sales: 70 },
+    { month: "Mar", sales: 45 },
+    { month: "Apr", sales: 85 },
+    { month: "May", sales: 60 },
+    { month: "Jun", sales: 75 },
+    { month: "Jul", sales: 50 },
+    { month: "Aug", sales: 90 },
+    { month: "Sep", sales: 65 },
+    { month: "Oct", sales: 80 },
+    { month: "Nov", sales: 70 },
+    { month: "Dec", sales: 95 },
+  ];
 
   const activeUsers = userRows.filter((u) => u.status === "Active").length;
 
@@ -107,7 +123,40 @@ const Dashboard = () => {
 
         <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <SectionTitle icon={LineChart} title="Monthly Policy Sales" />
-          <div className="mt-5"><MiniBars values={[55, 70, 45, 85, 60, 75, 50, 90, 65, 80, 70, 95]} /></div>
+
+          <div className="mt-5 h-60">
+            <ResponsiveContainer width="100%" height="100%">
+              <ReLineChart data={monthlyPolicySales}
+               margin={{
+                top: 5,
+                right: 20,
+                left: -10,
+                bottom: 5,
+              }}>
+                <CartesianGrid strokeDasharray="3 3" />
+
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 10 }}
+                />
+
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                />
+
+                <Tooltip />
+
+                <Line
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={{ r: 5 }}
+                  activeDot={{ r: 8 }}
+                />
+              </ReLineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">

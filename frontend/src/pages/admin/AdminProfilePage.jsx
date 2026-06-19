@@ -38,6 +38,11 @@ const AdminProfilePage = () => {
     });
   };
 
+  const removePhoto = () => {
+    updateAdminProfile({ profilePhoto: null });
+    log("/api/v4/profile/removePhoto -> Photo removed");
+  };
+
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <SectionTitle icon={UserCog} title="Admin Profile" />
@@ -50,10 +55,26 @@ const AdminProfilePage = () => {
           <div className="mt-4 text-xl font-black text-slate-950">{selectedProfile.name}</div>
           <div className="mt-1 text-sm font-bold text-slate-500">{selectedProfile.role}</div>
           <div className="mt-4 rounded-lg bg-white p-3 text-sm font-semibold text-slate-600">{selectedProfile.access}</div>
-          <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 hover:border-blue-300 hover:bg-blue-50">
-            Upload Photo
-            <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhotoUpload(e.target.files?.[0])} />
-          </label>
+          <div className="mt-4 flex flex-col gap-2">
+            <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 hover:border-blue-300 hover:bg-blue-50">
+              Upload Photo
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => onPhotoUpload(e.target.files?.[0])}
+              />
+            </label>
+
+            {selectedProfile.profilePhoto && (
+              <button
+                onClick={removePhoto}
+                className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-black text-rose-700 hover:bg-rose-100"
+              >
+                Remove Photo
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-5">
