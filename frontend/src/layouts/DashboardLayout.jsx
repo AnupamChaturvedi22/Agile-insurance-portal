@@ -16,6 +16,7 @@ import {
   Sun,
   User,
   PhoneCall,
+  Home,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/useAuth";
@@ -87,7 +88,7 @@ const DashboardNavList = ({
   onNavigate,
   navItems,
 }) => (
-    <nav className={["scrollbar-none mt-4 flex-1 space-y-1 overflow-y-auto", compact ? "pr-0" : "pr-1"].join(" ")}>
+  <nav className={["scrollbar-none mt-4 flex-1 space-y-1 overflow-y-auto", compact ? "pr-0" : "pr-1"].join(" ")}>
     {navItems.map((item) => {
       const Icon = item.icon;
       const active = pathname === item.to;
@@ -152,23 +153,23 @@ const DashboardLayout = () => {
     [systemSettings]
   );
 
-console.log(systemSettings);
-  
+  console.log(systemSettings);
+
   useEffect(() => {
-  const loadSettings = async () => {
-    try {
-      const response = await apiRequest("/api/admin/settings");
+    const loadSettings = async () => {
+      try {
+        const response = await apiRequest("/api/admin/settings");
 
-      setSystemSettings(response.data);
+        setSystemSettings(response.data);
 
-      console.log("Loaded Settings:", response.data);
-    } catch (error) {
-      console.error("Error loading system settings:", error);
-    }
-  };
+        console.log("Loaded Settings:", response.data);
+      } catch (error) {
+        console.error("Error loading system settings:", error);
+      }
+    };
 
-  loadSettings();
-}, []);
+    loadSettings();
+  }, []);
 
   useEffect(() => {
     setHtmlTheme(theme);
@@ -282,6 +283,15 @@ console.log(systemSettings);
               </div>
 
               <div className="flex items-center gap-2 xl:hidden">
+
+                <button
+                  onClick={() => navigate("/")}
+                  className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-3 text-slate-800 shadow-sm hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                  aria-label="Home"
+                >
+                  <Home size={18} />
+                </button>
+
                 <button
                   onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
                   className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-3 text-slate-800 shadow-sm hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
@@ -299,6 +309,14 @@ console.log(systemSettings);
                     className="w-[300px] rounded-2xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-800 shadow-sm outline-none placeholder:text-slate-400 focus:border-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 2xl:w-[360px]"
                   />
                 </div>
+
+                <button
+                  onClick={() => navigate("/")}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                >
+                  <Home size={18} />
+                  Home
+                </button>
 
                 <button
                   onClick={() => navigate("/health-insurance")}
@@ -368,8 +386,8 @@ console.log(systemSettings);
                     <div className="truncate text-xs text-slate-500 dark:text-slate-400">AI-powered portal</div>
                   </div>
                 </button>
-                <DashboardNavList   compact={collapsed}
- pathname={location.pathname} onNavigate={goTo} navItems={navItems} />
+                <DashboardNavList compact={collapsed}
+                  pathname={location.pathname} onNavigate={goTo} navItems={navItems} />
                 <div className="mt-4 space-y-2">
                   <DashboardUserCard user={displayUser} />
                   <button
