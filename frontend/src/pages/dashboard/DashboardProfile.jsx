@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ShieldCheck, User, Users, Plus, Trash2 } from "lucide-react";
 import { useAuth } from "../../contexts/useAuth";
 import { apiRequest } from "../../utils/api";
@@ -13,6 +13,7 @@ const DashboardProfile = () => {
   const [profilePhoto, setProfilePhoto] = useState(() => user?.profilePhoto || "");
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
+  const fileInputRef = useRef(null);
 
   const updateStoredUser = (changes) => {
     const sessionKey = "agile_insurance_session_v1";
@@ -40,6 +41,15 @@ const DashboardProfile = () => {
       updateStoredUser({ profilePhoto: nextPhoto });
     };
     reader.readAsDataURL(file);
+  };
+
+  const removePhoto = () => {
+    setProfilePhoto("");
+    updateStoredUser({ profilePhoto: "" });
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   useEffect(() => {
@@ -146,10 +156,28 @@ const DashboardProfile = () => {
               <div className="text-sm font-black text-slate-900 dark:text-white">{profile?.fullName || user?.fullName || "Member"}</div>
               <div className="mt-1 truncate text-xs font-semibold text-slate-500 dark:text-slate-400">{profile?.email || user?.email}</div>
             </div>
-            <label className="inline-flex cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
-              Upload Photo
-              <input type="file" accept="image/*" className="hidden" onChange={(event) => uploadPhoto(event.target.files?.[0])} />
-            </label>
+            <div className="flex gap-2">
+              <label className="inline-flex cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+                Upload Photo
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => uploadPhoto(event.target.files?.[0])}
+                />
+              </label>
+
+              {profilePhoto && (
+                <button
+                  type="button"
+                  onClick={removePhoto}
+                  className="rounded-2xl border border-red-200 px-4 py-3 text-sm font-black text-red-600"
+                >
+                  Remove Photo
+                </button>
+              )}
+            </div>
           </div>
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Developer note: profile summary fields mirror the verified user object from AuthContext. */}

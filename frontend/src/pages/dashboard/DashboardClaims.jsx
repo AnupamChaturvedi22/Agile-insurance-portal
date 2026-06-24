@@ -34,6 +34,8 @@ const statusPalette = {
   Rejected: "bg-rose-600/10 text-rose-700 dark:text-rose-300",
 };
 
+const MIN_CLAIM_AMOUNT = 1000; // Minimum ₹1000
+
 const DashboardClaims = () => {
   const { user } = useAuth();
   const readMyClaims = () => {
@@ -55,19 +57,19 @@ const DashboardClaims = () => {
   const [features, setFeatures] = useState(null);
 
   useEffect(() => {
-  const fetchSettings = async () => {
-    try {
-      const response = await apiRequest("/api/admin/settings");
-      const settings = response?.data;
+    const fetchSettings = async () => {
+      try {
+        const response = await apiRequest("/api/admin/settings");
+        const settings = response?.data;
 
-      setFeatures(settings?.features || {});
-    } catch (error) {
-      console.error("Failed to load features:", error);
-    }
-  };
+        setFeatures(settings?.features || {});
+      } catch (error) {
+        console.error("Failed to load features:", error);
+      }
+    };
 
-  fetchSettings();
-}, []);
+    fetchSettings();
+  }, []);
   const createClaim = () => {
     setForm({ type: "Health", description: "", amount: "", docName: "" });
     setStep(0);
@@ -76,17 +78,57 @@ const DashboardClaims = () => {
 
   const close = () => setOpen(false);
 
-  const next = () => setStep((s) => Math.min(claimSteps.length - 1, s + 1));
+  const next = () => {
+    if (step === 1) {
+      const amount = Number(form.amount);
+
+      if (!form.description.trim()) {
+        return window.alert("Please enter claim description.");
+      }
+
+      if (!amount) {
+        return window.alert("Please enter claim amount.");
+      }
+
+      if (amount < MIN_CLAIM_AMOUNT) {
+        return window.alert(
+          `Minimum claim amount is ₹${MIN_CLAIM_AMOUNT.toLocaleString("en-IN")}`
+        );
+      }
+    }
+
+    setStep((s) => Math.min(claimSteps.length - 1, s + 1));
+  };
   const back = () => setStep((s) => Math.max(0, s - 1));
 
   const submit = async () => {
-    if (!form.description.trim()) return window.alert("Please add a claim description.");
-    if (!String(form.amount).trim()) return window.alert("Please enter claim amount.");
-    if (!form.docName.trim()) return window.alert("Please upload supporting documents.");
+    if (!form.description.trim()) {
+      return window.alert("Please add a claim description.");
+    }
+
+    if (!String(form.amount).trim()) {
+      return window.alert("Please enter claim amount.");
+    }
+
+    const amount = Number(form.amount);
+
+    if (amount < MIN_CLAIM_AMOUNT) {
+      return window.alert(
+        `Minimum claim amount is ₹${MIN_CLAIM_AMOUNT.toLocaleString("en-IN")}`
+      );
+    }
+
+    if (!form.docName.trim()) {
+      return window.alert("Please upload supporting documents.");
+    }
+
     setBusy(true);
+
     await new Promise((r) => setTimeout(r, 900));
+
     const now = new Date().toISOString();
     const all = load("claims", []);
+
     all.unshift({
       id: uid("claim"),
       userId: user?.id || "",
@@ -95,7 +137,7 @@ const DashboardClaims = () => {
       type: form.type,
       policy: form.type,
       description: form.description.trim(),
-      amount: Number(form.amount) || 0,
+      amount,
       docName: form.docName,
       status: "Pending",
       aiStatus: "Pending",
@@ -107,6 +149,7 @@ const DashboardClaims = () => {
       ],
       progress: 2,
     });
+
     save("claims", all);
     setBusy(false);
     setOpen(false);
@@ -334,7 +377,15 @@ const DashboardClaims = () => {
                       />
                     </label>
                     <label className="block space-y-2">
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Claim amount (INR)</span>
+                      <div>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                          Claim amount (INR)
+                        </span>
+
+                        <p className="mt-1 text-xs text-red-500">
+                          Minimum claim amount: ₹1,000
+                        </p>
+                      </div>
                       <input
                         value={form.amount}
                         onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value.replace(/[^\d]/g, "").slice(0, 8) }))}
@@ -342,6 +393,14 @@ const DashboardClaims = () => {
                         inputMode="numeric"
                         placeholder="e.g. 25000"
                       />
+
+                      {form.amount &&
+                        Number(form.amount) < MIN_CLAIM_AMOUNT && (
+                          <p className="mt-2 text-sm font-semibold text-red-600">
+                            Minimum claim amount is ₹
+                            {MIN_CLAIM_AMOUNT.toLocaleString("en-IN")}
+                          </p>
+                        )}
                     </label>
                   </div>
                 ) : null}
